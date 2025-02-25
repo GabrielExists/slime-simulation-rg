@@ -1,0 +1,13 @@
+cargo-features = ["edition2024"]
+[package]
+name = "first-rg-shader"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+spirv-std = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+
+bytemuck = { version = "1.18.0", features = ["derive"] }
