@@ -2,9 +2,6 @@
 
 #![cfg_attr(target_arch = "spirv", no_std)]
 // HACK(eddyb) can't easily see warnings otherwise from `spirv-builder` builds.
-#![deny(warnings)]
-
-mod shared;
 
 use core::f32::consts::PI;
 use glam::{Vec2, Vec3, Vec4, vec2, vec3};

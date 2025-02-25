@@ -2,6 +2,8 @@
 members = [
     "first-rg-program",
     "first-rg-shader",
+    "cpu-runner",
+    "shared",
     "builder",
 ]
 default-members = [
