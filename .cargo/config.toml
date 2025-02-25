@@ -5,3 +5,4 @@ rustflags = ["-Zshare-generics=off"]
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
 rustflags = ["-Zshare-generics=off"]
+runner = "python bld-deploy-remote.py -t -r --source"
