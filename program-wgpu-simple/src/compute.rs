@@ -24,9 +24,9 @@ async fn start_internal() {
             .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES);
 
     let required_features = if timestamping {
-        wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
+        wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES | wgpu::Features::PUSH_CONSTANTS
     } else {
-        wgpu::Features::empty()
+        wgpu::Features::PUSH_CONSTANTS
     };
     if !timestamping {
         eprintln!(

@@ -135,7 +135,8 @@ async fn run_inner(
 
 
     let (
-        pipeline_layout,
+        render_pipeline_layout,
+        compute_pipeline_layout,
         mut render_pipeline,
         compute_pipeline,
         compute_bind_group_layout,
@@ -156,7 +157,7 @@ async fn run_inner(
         // Have the closure take ownership of the resources.
         // `event_loop.run` never returns, therefore we must do this to ensure
         // the resources are properly cleaned up.
-        let _ = (&instance, &adapter, &pipeline_layout);
+        let _ = (&instance, &adapter, &render_pipeline_layout, &compute_pipeline_layout);
         let render_pipeline = &mut render_pipeline;
 
         event_loop_window_target.set_control_flow(ControlFlow::Wait);
@@ -217,6 +218,125 @@ async fn run_inner(
                 // Graphics
                 window.request_redraw();
 
+                // Compute
+                let timestamp_period: Option<f32> = if timestamping {
+                    Some(queue.get_timestamp_period())
+                } else {
+                    None
+                };
+
+                // Compute
+                let top = 2u32.pow(20);
+                let src_range = 1..top;
+
+                let src = src_range
+                    .clone()
+                    .flat_map(u32::to_ne_bytes)
+                    .collect::<Vec<_>>();
+
+                // Compute
+                let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: None,
+                    size: src.len() as wgpu::BufferAddress,
+                    // Can be read to the CPU, and can be copied from the shader's storage buffer
+                    usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
+
+                let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Collatz Conjecture Input"),
+                    contents: &src,
+                    usage: wgpu::BufferUsages::STORAGE
+                        | wgpu::BufferUsages::COPY_DST
+                        | wgpu::BufferUsages::COPY_SRC,
+                });
+
+                let (timestamp_buffer, timestamp_readback_buffer) = if timestamping {
+                    let timestamp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Timestamps buffer"),
+                        size: 16,
+                        usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+                        mapped_at_creation: false,
+                    });
+
+                    let timestamp_readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: None,
+                        size: 16,
+                        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: true,
+                    });
+                    timestamp_readback_buffer.unmap();
+
+                    (Some(timestamp_buffer), Some(timestamp_readback_buffer))
+                } else {
+                    (None, None)
+                };
+
+                let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout: &compute_bind_group_layout,
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: storage_buffer.as_entire_binding(),
+                    }],
+                });
+
+                let queries = if timestamping {
+                    Some(device.create_query_set(&wgpu::QuerySetDescriptor {
+                        label: None,
+                        count: 2,
+                        ty: wgpu::QueryType::Timestamp,
+                    }))
+                } else {
+                    None
+                };
+
+                // Run compute pass
+                let mut compute_encoder =
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+                {
+                    let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
+                    cpass.set_bind_group(0, &bind_group, &[]);
+                    cpass.set_pipeline(&compute_pipeline);
+                    if timestamping {
+                        if let Some(queries) = queries.as_ref() {
+                            cpass.write_timestamp(queries, 0);
+                        }
+                    }
+                    cpass.dispatch_workgroups(src_range.len() as u32 / 64, 1, 1);
+                    if timestamping {
+                        if let Some(queries) = queries.as_ref() {
+                            cpass.write_timestamp(queries, 1);
+                        }
+                    }
+                }
+
+                compute_encoder.copy_buffer_to_buffer(
+                    &storage_buffer,
+                    0,
+                    &readback_buffer,
+                    0,
+                    src.len() as wgpu::BufferAddress,
+                );
+
+                if timestamping {
+                    if let (Some(queries), Some(timestamp_buffer), Some(timestamp_readback_buffer)) = (
+                        queries.as_ref(),
+                        timestamp_buffer.as_ref(),
+                        timestamp_readback_buffer.as_ref(),
+                    ) {
+                        compute_encoder.resolve_query_set(queries, 0..2, timestamp_buffer, 0);
+                        compute_encoder.copy_buffer_to_buffer(
+                            timestamp_buffer,
+                            0,
+                            timestamp_readback_buffer,
+                            0,
+                            timestamp_buffer.size(),
+                        );
+                    }
+                }
+
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
                     let output = match surface.get_current_texture() {
                         Ok(surface) => surface,
@@ -270,126 +390,6 @@ async fn run_inner(
                         );
                         rpass.draw(0..3, 0..1);
                     }
-
-                    // Compute
-                    let timestamp_period: Option<f32> = if timestamping {
-                        Some(queue.get_timestamp_period())
-                    } else {
-                        None
-                    };
-
-                    // Compute
-                    let top = 2u32.pow(20);
-                    let src_range = 1..top;
-
-                    let src = src_range
-                        .clone()
-                        .flat_map(u32::to_ne_bytes)
-                        .collect::<Vec<_>>();
-
-                    // Compute
-                    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                        label: None,
-                        size: src.len() as wgpu::BufferAddress,
-                        // Can be read to the CPU, and can be copied from the shader's storage buffer
-                        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: false,
-                    });
-
-                    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Collatz Conjecture Input"),
-                        contents: &src,
-                        usage: wgpu::BufferUsages::STORAGE
-                            | wgpu::BufferUsages::COPY_DST
-                            | wgpu::BufferUsages::COPY_SRC,
-                    });
-
-                    let (timestamp_buffer, timestamp_readback_buffer) = if timestamping {
-                        let timestamp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Timestamps buffer"),
-                            size: 16,
-                            usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
-                            mapped_at_creation: false,
-                        });
-
-                        let timestamp_readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                            label: None,
-                            size: 16,
-                            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                            mapped_at_creation: true,
-                        });
-                        timestamp_readback_buffer.unmap();
-
-                        (Some(timestamp_buffer), Some(timestamp_readback_buffer))
-                    } else {
-                        (None, None)
-                    };
-
-                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: None,
-                        layout: &compute_bind_group_layout,
-                        entries: &[wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: storage_buffer.as_entire_binding(),
-                        }],
-                    });
-
-                    let queries = if timestamping {
-                        Some(device.create_query_set(&wgpu::QuerySetDescriptor {
-                            label: None,
-                            count: 2,
-                            ty: wgpu::QueryType::Timestamp,
-                        }))
-                    } else {
-                        None
-                    };
-
-                    // Run compute pass
-                    let mut compute_encoder =
-                        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-
-                    {
-                        let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
-                        cpass.set_bind_group(0, &bind_group, &[]);
-                        cpass.set_pipeline(&compute_pipeline);
-                        if timestamping {
-                            if let Some(queries) = queries.as_ref() {
-                                cpass.write_timestamp(queries, 0);
-                            }
-                        }
-                        cpass.dispatch_workgroups(src_range.len() as u32 / 64, 1, 1);
-                        if timestamping {
-                            if let Some(queries) = queries.as_ref() {
-                                cpass.write_timestamp(queries, 1);
-                            }
-                        }
-                    }
-
-                    compute_encoder.copy_buffer_to_buffer(
-                        &storage_buffer,
-                        0,
-                        &readback_buffer,
-                        0,
-                        src.len() as wgpu::BufferAddress,
-                    );
-
-                    if timestamping {
-                        if let (Some(queries), Some(timestamp_buffer), Some(timestamp_readback_buffer)) = (
-                            queries.as_ref(),
-                            timestamp_buffer.as_ref(),
-                            timestamp_readback_buffer.as_ref(),
-                        ) {
-                            compute_encoder.resolve_query_set(queries, 0..2, timestamp_buffer, 0);
-                            compute_encoder.copy_buffer_to_buffer(
-                                timestamp_buffer,
-                                0,
-                                timestamp_readback_buffer,
-                                0,
-                                timestamp_buffer.size(),
-                            );
-                        }
-                    }
-
 
                     queue.submit([compute_encoder.finish(), graphics_encoder.finish()]);
                     output.present();
@@ -474,7 +474,7 @@ async fn run_inner(
 fn create_pipeline(
     device: &wgpu::Device,
     surface_format: wgpu::TextureFormat,
-) -> (wgpu::PipelineLayout, wgpu::RenderPipeline, wgpu::ComputePipeline, wgpu::BindGroupLayout) {
+) -> (wgpu::PipelineLayout, wgpu::PipelineLayout, wgpu::RenderPipeline, wgpu::ComputePipeline, wgpu::BindGroupLayout) {
     let create_module = |module| {
         let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
         device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -540,20 +540,26 @@ fn create_pipeline(
     });
 
     // Merged
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: None,
-        bind_group_layouts: &[&compute_bind_group_layout],
+    let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Render pipeline layout"),
+        bind_group_layouts: &[],
         push_constant_ranges: &[wgpu::PushConstantRange {
             stages: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
             range: 0..std::mem::size_of::<ShaderConstants>() as u32,
         }],
     });
+    let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Compute pipeline layout"),
+        bind_group_layouts: &[&compute_bind_group_layout],
+        push_constant_ranges: &[],
+    });
+
 
     // Graphics
     let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         cache: None,
-        label: None,
-        layout: Some(&pipeline_layout),
+        label: Some("Render pipeline"),
+        layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
             module: vs_module,
             entry_point: Some(vs_entry_point),
@@ -594,12 +600,12 @@ fn create_pipeline(
         compilation_options: Default::default(),
         cache: None,
         label: None,
-        layout: Some(&pipeline_layout),
+        layout: Some(&compute_pipeline_layout),
         module: &cs_module,
         entry_point: Some(cs_entry_point),
     });
 
-    (pipeline_layout, render_pipeline, compute_pipeline, compute_bind_group_layout)
+    (render_pipeline_layout, compute_pipeline_layout, render_pipeline, compute_pipeline, compute_bind_group_layout)
 }
 
 // Graphics

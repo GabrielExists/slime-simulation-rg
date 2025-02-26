@@ -74,7 +74,7 @@ mod graphics;
 
 pub fn main(
 ) {
-    if true {
+    if false {
         return compute::start();
     }
 
