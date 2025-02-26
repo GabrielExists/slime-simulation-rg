@@ -5,6 +5,10 @@
       <sourceFolder url="file://$MODULE_DIR$/builder/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/first-rg-program/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/first-rg-shader/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/program-wgpu-simple/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shader-compute/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shader-sky/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shared/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

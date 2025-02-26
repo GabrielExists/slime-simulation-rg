@@ -1,7 +1,7 @@
 cargo-features = ["edition2024"]
 
 [package]
-name = "example-runner-wgpu-builder"
+name = "builder"
 version = "0.0.0"
 publish = false
 authors.workspace = true

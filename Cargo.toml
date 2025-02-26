@@ -1,13 +1,16 @@
 [workspace]
 members = [
-    "first-rg-program",
-    "first-rg-shader",
-    "cpu-runner",
+    "program-wgpu-hot-reload",
+    "program-wgpu-simple",
+    "program-cpu",
+    "shader-sky",
+    "shader-compute",
+    "shader-slime",
     "shared",
     "builder",
 ]
 default-members = [
-    "first-rg-program",
+    "program-wgpu-simple",
 ]
 resolver = "3"
 

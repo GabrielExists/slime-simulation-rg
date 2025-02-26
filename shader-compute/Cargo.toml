@@ -1,0 +1,14 @@
+cargo-features = ["edition2024"]
+[package]
+name = "shader-compute"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+spirv-std = { workspace = true }
+shared = { path = "../shared" }
+
+bytemuck = { version = "1.18.0", features = ["derive"] }

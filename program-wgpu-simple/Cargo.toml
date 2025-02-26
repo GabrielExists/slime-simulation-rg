@@ -1,7 +1,7 @@
 cargo-features = ["edition2024"]
 
 [package]
-name = "first-rg-program"
+name = "program-wgpu-simple"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,15 +10,6 @@ wgpu = { version = "23", features = ["spirv", "vulkan-portability"]}
 winit = { version = "0.30.0", features = ["android-native-activity", "rwh_05"] }
 bytemuck = { version = "1.18.0", features = ["derive"] }
 futures = { version = "0.3", default-features = false, features = ["std", "executor"] }
-env_logger = "0.11.0"
-
-cfg-if = "1.0.0"
-spirv-builder = { optional = true, workspace = true, features = ["watch"] }
-spirv-std = { workspace = true }
-strum = { version = "0.26.0", default-features = false, features = ["std", "derive"] }
 
 [build-dependencies]
 spirv-builder = { workspace = true }
-
-[features]
-hot-reload = ["spirv-builder"]

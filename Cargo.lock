@@ -226,6 +226,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "builder"
+version = "0.0.0"
+dependencies = [
+ "spirv-builder",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -400,16 +407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpu-runner"
-version = "0.0.0"
-dependencies = [
- "first-rg-shader",
- "minifb",
- "rayon",
- "shared",
-]
-
-[[package]]
 name = "crc32fast"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -560,13 +557,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-runner-wgpu-builder"
-version = "0.0.0"
-dependencies = [
- "spirv-builder",
-]
-
-[[package]]
 name = "fallible-iterator"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -588,30 +578,6 @@ dependencies = [
  "libc",
  "libredox",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "first-rg-program"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "cfg-if",
- "env_logger",
- "futures",
- "spirv-builder",
- "spirv-std",
- "strum",
- "wgpu",
- "winit",
-]
-
-[[package]]
-name = "first-rg-shader"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "shared",
- "spirv-std",
 ]
 
 [[package]]
@@ -1805,6 +1771,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afbdc74edc00b6f6a218ca6a5364d6226a259d4b8ea1af4a0ea063f27e179f4d"
 
 [[package]]
+name = "program-cpu"
+version = "0.0.0"
+dependencies = [
+ "minifb",
+ "rayon",
+ "shader-sky",
+ "shared",
+]
+
+[[package]]
+name = "program-wgpu-hot-reload"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cfg-if",
+ "env_logger",
+ "futures",
+ "spirv-builder",
+ "spirv-std",
+ "strum",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "program-wgpu-simple"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "futures",
+ "spirv-builder",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "quick-xml"
 version = "0.37.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2153,6 +2155,33 @@ dependencies = [
  "memchr",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "shader-compute"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "shared",
+ "spirv-std",
+]
+
+[[package]]
+name = "shader-sky"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "shared",
+ "spirv-std",
+]
+
+[[package]]
+name = "shader-slime"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "shared",
+ "spirv-std",
 ]
 
 [[package]]
