@@ -1760,24 +1760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "shader-compute"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "shared",
- "spirv-std",
-]
-
-[[package]]
-name = "shader-sky"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "shared",
- "spirv-std",
-]
-
-[[package]]
 name = "shader-slime"
 version = "0.1.0"
 dependencies = [

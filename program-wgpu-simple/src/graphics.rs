@@ -487,56 +487,24 @@ fn create_pipeline(
     let vs_entry_point = shaders::main_vs;
     let fs_entry_point = shaders::main_fs;
     let cs_entry_point = shaders::main_cs;
-    let graphics_module = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
-    let compute_module = wgpu::include_spirv_raw!(env!("shader_compute.spv"));
-    let vs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
-        label: Some(vs_entry_point),
-        source: Cow::Borrowed(&graphics_module.source),
-    };
-    let fs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
-        label: Some(fs_entry_point),
-        source: Cow::Borrowed(&graphics_module.source),
-    };
-    let cs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
-        label: Some(cs_entry_point),
-        source: Cow::Borrowed(&compute_module.source),
-    };
-
-    // Merged
-    // HACK(eddyb) avoid calling `device.create_shader_module` twice unnecessarily.
-    let vs_fs_same_module = std::ptr::eq(&vs_module_descr.source[..], &fs_module_descr.source[..]);
-    // let vs_cs_same_module = std::ptr::eq(&vs_module_descr.source[..], &cs_module_descr.source[..]);
-
-    // Merged
-    let vs_module = &create_module(vs_module_descr);
-    let fs_module;
-    let fs_module = if vs_fs_same_module {
-        vs_module
-    } else {
-        fs_module = create_module(fs_module_descr);
-        &fs_module
-    };
-    // let cs_module;
-    // let cs_module = if vs_cs_same_module {
-    //     vs_module
-    // } else {
-    let cs_module = create_module(cs_module_descr);
-        // &cs_module
-    // };
+    let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
+    let module = &create_module(module_raw);
 
     // Compute
     let compute_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            count: None,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                has_dynamic_offset: false,
-                min_binding_size: None,
-                ty: wgpu::BufferBindingType::Storage { read_only: false },
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                count: None,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
             },
-        }],
+        ],
     });
 
     // Merged
@@ -561,7 +529,7 @@ fn create_pipeline(
         label: Some("Render pipeline"),
         layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
-            module: vs_module,
+            module,
             entry_point: Some(vs_entry_point),
             buffers: &[],
             compilation_options: Default::default(),
@@ -583,7 +551,7 @@ fn create_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             compilation_options: Default::default(),
-            module: fs_module,
+            module,
             entry_point: Some(fs_entry_point),
             targets: &[Some(wgpu::ColorTargetState {
                 format: surface_format,
@@ -601,7 +569,7 @@ fn create_pipeline(
         cache: None,
         label: None,
         layout: Some(&compute_pipeline_layout),
-        module: &cs_module,
+        module,
         entry_point: Some(cs_entry_point),
     });
 

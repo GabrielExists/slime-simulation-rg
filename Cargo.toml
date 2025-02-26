@@ -1,8 +1,6 @@
 [workspace]
 members = [
     "program-wgpu-simple",
-    "shader-sky",
-    "shader-compute",
     "shader-slime",
     "shared",
 ]

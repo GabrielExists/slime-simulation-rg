@@ -2,7 +2,7 @@ use spirv_builder::{MetadataPrintout, SpirvBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    for shader_name in ["shader-slime", "shader-compute"] {
+    for shader_name in ["shader-slime"] {
         let crate_path = [manifest_dir, "..", shader_name]
             .iter()
             .copied()

@@ -2,5 +2,5 @@
 
 fn main() {
     // println!("{}", env!("OUT_DIR"));
-    program_wgpu_simple::main();
+    program_wgpu_simple::run();
 }

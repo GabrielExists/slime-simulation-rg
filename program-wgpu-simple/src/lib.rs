@@ -68,15 +68,6 @@
     rust_2018_idioms
 )]
 
-mod compute;
-
 mod graphics;
+pub use graphics::run;
 
-pub fn main(
-) {
-    if false {
-        return compute::start();
-    }
-
-    graphics::run();
-}
