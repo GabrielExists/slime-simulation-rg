@@ -1,5 +1,7 @@
 use std::borrow::Cow;
+use std::time::Duration;
 use shared::ShaderConstants;
+use wgpu::util::DeviceExt;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -12,17 +14,41 @@ mod shaders {
     pub const main_fs: &str = "main_fs";
     #[allow(non_upper_case_globals)]
     pub const main_vs: &str = "main_vs";
-
+    #[allow(non_upper_case_globals)]
+    pub const main_cs: &str = "main_cs";
 }
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
 }
 
-async fn run(
+#[allow(clippy::match_wild_err_arm)]
+pub fn run() {
+    let mut event_loop_builder = EventLoop::with_user_event();
+    let event_loop = event_loop_builder.build().unwrap();
+
+    // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
+    // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
+    #[allow(deprecated)]
+        let window = event_loop
+        .create_window(
+            winit::window::Window::default_attributes()
+                .with_title("Rust GPU - wgpu")
+                .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0)),
+        )
+        .unwrap();
+
+    futures::executor::block_on(run_inner(
+        event_loop,
+        window,
+    ));
+}
+
+async fn run_inner(
     event_loop: EventLoop<()>,
     window: Window,
 ) {
+    // Common in compute and graphics
     let backends = wgpu::util::backend_bits_from_env()
         .unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::METAL);
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -31,11 +57,13 @@ async fn run(
         ..Default::default()
     });
 
+    // Graphics
     // HACK(eddyb) marker error type for lazily-created surfaces (e.g. on Android).
     struct SurfaceCreationPending {
         preferred_format: wgpu::TextureFormat,
     }
 
+    // Graphics
     // Wait for Resumed event on Android; the surface is only otherwise needed
     // early to find an adapter that can render to this surface.
     let initial_surface = if cfg!(target_os = "android") {
@@ -48,23 +76,43 @@ async fn run(
             .expect("Failed to create surface from window"))
     };
 
+    // Common in compute and graphics
     let adapter = wgpu::util::initialize_adapter_from_env_or_default(
         &instance,
         // Request an adapter which can render to our surface
         initial_surface.as_ref().ok(),
     )
-    .await
-    .expect("Failed to find an appropriate adapter");
+        .await
+        .expect("Failed to find an appropriate adapter");
 
-    let required_features = wgpu::Features::PUSH_CONSTANTS;
-    // if options.force_spirv_passthru {
-    //     required_features |= wgpu::Features::SPIRV_SHADER_PASSTHROUGH;
-    // }
+    // Compute
+    // Timestamping may not be supported
+    let timestamping = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY)
+        && adapter
+        .features()
+        .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES);
+
+
+    // Merged
+    let required_features = wgpu::Features::PUSH_CONSTANTS | if timestamping {
+        wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
+    } else {
+        wgpu::Features::empty()
+    };
+    // Compute
+    if !timestamping {
+        eprintln!(
+            "Adapter reports that timestamping is not supported - no timing information will be available"
+        );
+    }
+
+    // Graphics
     let required_limits = wgpu::Limits {
         max_push_constant_size: 128,
         ..Default::default()
     };
 
+    // Common
     // Create the logical device and command queue
     let (device, queue): (wgpu::Device, wgpu::Queue) = adapter
         .request_device(
@@ -79,48 +127,20 @@ async fn run(
         .await
         .expect("Failed to create device");
 
-    fn auto_configure_surface<'a>(
-        adapter: &wgpu::Adapter,
-        device: &wgpu::Device,
-        surface: wgpu::Surface<'a>,
-        size: winit::dpi::PhysicalSize<u32>,
-    ) -> (wgpu::Surface<'a>, wgpu::SurfaceConfiguration) {
-        let mut surface_config = surface
-            .get_default_config(adapter, size.width, size.height)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Missing formats/present modes in surface capabilities: {:#?}",
-                    surface.get_capabilities(adapter)
-                )
-            });
-
-        // FIXME(eddyb) should this be toggled by a CLI arg?
-        // NOTE(eddyb) VSync was disabled in the past, but without VSync,
-        // especially for simpler shaders, you can easily hit thousands
-        // of frames per second, stressing GPUs for no reason.
-        surface_config.present_mode = wgpu::PresentMode::AutoVsync;
-
-        surface.configure(device, &surface_config);
-
-        (surface, surface_config)
-    }
+    // Graphics
     let mut surface_with_config = initial_surface
         .map(|surface| auto_configure_surface(&adapter, &device, surface, window.inner_size()));
 
     // Load the shaders from disk
 
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: None,
-        bind_group_layouts: &[],
-        push_constant_ranges: &[wgpu::PushConstantRange {
-            stages: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            range: 0..std::mem::size_of::<ShaderConstants>() as u32,
-        }],
-    });
 
-    let mut render_pipeline = create_pipeline(
+    let (
+        pipeline_layout,
+        mut render_pipeline,
+        compute_pipeline,
+        compute_bind_group_layout,
+    ) = create_pipeline(
         &device,
-        &pipeline_layout,
         surface_with_config.as_ref().map_or_else(
             |pending| pending.preferred_format,
             |(_, surface_config)| surface_config.format,
@@ -194,11 +214,7 @@ async fn run(
                 event: WindowEvent::RedrawRequested,
                 ..
             } => {
-                // FIXME(eddyb) only the mouse shader *really* needs this, could
-                // avoid doing wasteful rendering by special-casing each shader?
-                // (with VSync enabled this can't be *too* bad, thankfully)
-                // FIXME(eddyb) is this the best way to do continuous redraws in
-                // `winit`? (or should we stop using `ControlFlow::Wait`? etc.)
+                // Graphics
                 window.request_redraw();
 
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
@@ -221,10 +237,10 @@ async fn run(
                     let output_view = output
                         .texture
                         .create_view(&wgpu::TextureViewDescriptor::default());
-                    let mut encoder = device
+                    let mut graphics_encoder = device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
                     {
-                        let mut rpass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        let mut rpass: wgpu::RenderPass<'_> = graphics_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                             label: None,
                             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                                 view: &output_view,
@@ -255,23 +271,199 @@ async fn run(
                         rpass.draw(0..3, 0..1);
                     }
 
-                    queue.submit(Some(encoder.finish()));
+                    // Compute
+                    let timestamp_period: Option<f32> = if timestamping {
+                        Some(queue.get_timestamp_period())
+                    } else {
+                        None
+                    };
+
+                    // Compute
+                    let top = 2u32.pow(20);
+                    let src_range = 1..top;
+
+                    let src = src_range
+                        .clone()
+                        .flat_map(u32::to_ne_bytes)
+                        .collect::<Vec<_>>();
+
+                    // Compute
+                    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                        label: None,
+                        size: src.len() as wgpu::BufferAddress,
+                        // Can be read to the CPU, and can be copied from the shader's storage buffer
+                        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
+
+                    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Collatz Conjecture Input"),
+                        contents: &src,
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
+
+                    let (timestamp_buffer, timestamp_readback_buffer) = if timestamping {
+                        let timestamp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Timestamps buffer"),
+                            size: 16,
+                            usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+                            mapped_at_creation: false,
+                        });
+
+                        let timestamp_readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                            label: None,
+                            size: 16,
+                            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: true,
+                        });
+                        timestamp_readback_buffer.unmap();
+
+                        (Some(timestamp_buffer), Some(timestamp_readback_buffer))
+                    } else {
+                        (None, None)
+                    };
+
+                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: None,
+                        layout: &compute_bind_group_layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: storage_buffer.as_entire_binding(),
+                        }],
+                    });
+
+                    let queries = if timestamping {
+                        Some(device.create_query_set(&wgpu::QuerySetDescriptor {
+                            label: None,
+                            count: 2,
+                            ty: wgpu::QueryType::Timestamp,
+                        }))
+                    } else {
+                        None
+                    };
+
+                    // Run compute pass
+                    let mut compute_encoder =
+                        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+                    {
+                        let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
+                        cpass.set_bind_group(0, &bind_group, &[]);
+                        cpass.set_pipeline(&compute_pipeline);
+                        if timestamping {
+                            if let Some(queries) = queries.as_ref() {
+                                cpass.write_timestamp(queries, 0);
+                            }
+                        }
+                        cpass.dispatch_workgroups(src_range.len() as u32 / 64, 1, 1);
+                        if timestamping {
+                            if let Some(queries) = queries.as_ref() {
+                                cpass.write_timestamp(queries, 1);
+                            }
+                        }
+                    }
+
+                    compute_encoder.copy_buffer_to_buffer(
+                        &storage_buffer,
+                        0,
+                        &readback_buffer,
+                        0,
+                        src.len() as wgpu::BufferAddress,
+                    );
+
+                    if timestamping {
+                        if let (Some(queries), Some(timestamp_buffer), Some(timestamp_readback_buffer)) = (
+                            queries.as_ref(),
+                            timestamp_buffer.as_ref(),
+                            timestamp_readback_buffer.as_ref(),
+                        ) {
+                            compute_encoder.resolve_query_set(queries, 0..2, timestamp_buffer, 0);
+                            compute_encoder.copy_buffer_to_buffer(
+                                timestamp_buffer,
+                                0,
+                                timestamp_readback_buffer,
+                                0,
+                                timestamp_buffer.size(),
+                            );
+                        }
+                    }
+
+
+                    queue.submit([compute_encoder.finish(), graphics_encoder.finish()]);
                     output.present();
+
+                    // Compute
+                    let buffer_slice = readback_buffer.slice(..);
+                    if timestamping {
+                        if let Some(timestamp_readback_buffer) = timestamp_readback_buffer.as_ref() {
+                            let timestamp_slice = timestamp_readback_buffer.slice(..);
+                            timestamp_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
+                        }
+                    }
+                    buffer_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
+                    // NOTE(eddyb) `poll` should return only after the above callbacks fire
+                    // (see also https://github.com/gfx-rs/wgpu/pull/2698 for more details).
+                    device.poll(wgpu::Maintain::Wait);
+
+                    if timestamping {
+                        if let (Some(timestamp_readback_buffer), Some(timestamp_period)) =
+                            (timestamp_readback_buffer.as_ref(), timestamp_period)
+                        {
+                            {
+                                let timing_data = timestamp_readback_buffer.slice(..).get_mapped_range();
+                                let timings = timing_data
+                                    .chunks_exact(8)
+                                    .map(|b| u64::from_ne_bytes(b.try_into().unwrap()))
+                                    .collect::<Vec<_>>();
+
+                                println!(
+                                    "Took: {:?}",
+                                    Duration::from_nanos(
+                                        ((timings[1] - timings[0]) as f64 * f64::from(timestamp_period)) as u64
+                                    )
+                                );
+                                drop(timing_data);
+                                timestamp_readback_buffer.unmap();
+                            }
+                        }
+                    }
+
+                    let data = buffer_slice.get_mapped_range();
+                    let result = data
+                        .chunks_exact(4)
+                        .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
+                        .collect::<Vec<_>>();
+                    drop(data);
+                    readback_buffer.unmap();
+
+                    let mut max = 0;
+                    for (src, out) in src_range.zip(result.iter().copied()) {
+                        if out == u32::MAX {
+                            println!("{src}: overflowed");
+                            break;
+                        } else if out > max {
+                            max = out;
+                            // Should produce <https://oeis.org/A006877>
+                            println!("{src}: {out}");
+                        }
+                    }
                 }
             }
             Event::WindowEvent {
                 event:
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        event:
-                            winit::event::KeyEvent {
-                                logical_key:
-                                    winit::keyboard::Key::Named(winit::keyboard::NamedKey::Escape),
-                                state: winit::event::ElementState::Pressed,
-                                ..
-                            },
+                WindowEvent::CloseRequested
+                | WindowEvent::KeyboardInput {
+                    event:
+                    winit::event::KeyEvent {
+                        logical_key:
+                        winit::keyboard::Key::Named(winit::keyboard::NamedKey::Escape),
+                        state: winit::event::ElementState::Pressed,
                         ..
                     },
+                    ..
+                },
                 ..
             } => event_loop_window_target.exit(),
             _ => {}
@@ -281,40 +473,41 @@ async fn run(
 
 fn create_pipeline(
     device: &wgpu::Device,
-    pipeline_layout: &wgpu::PipelineLayout,
     surface_format: wgpu::TextureFormat,
-) -> wgpu::RenderPipeline {
-    // FIXME(eddyb) automate this decision by default.
+) -> (wgpu::PipelineLayout, wgpu::RenderPipeline, wgpu::ComputePipeline, wgpu::BindGroupLayout) {
     let create_module = |module| {
-        // if options.force_spirv_passthru {
-        //     unsafe { device.create_shader_module_spirv(&module) }
-        // } else {
-            let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
-            device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label,
-                source: wgpu::ShaderSource::SpirV(source),
-            })
-        // }
+        let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
+        device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label,
+            source: wgpu::ShaderSource::SpirV(source),
+        })
     };
 
+    // Merged
     let vs_entry_point = shaders::main_vs;
     let fs_entry_point = shaders::main_fs;
-
-    let module = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
+    let cs_entry_point = shaders::main_cs;
+    let graphics_module = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
+    let compute_module = wgpu::include_spirv_raw!(env!("shader_compute.spv"));
     let vs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
         label: Some(vs_entry_point),
-        source: Cow::Borrowed(&module.source),
+        source: Cow::Borrowed(&graphics_module.source),
     };
     let fs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
         label: Some(fs_entry_point),
-        source: Cow::Borrowed(&module.source),
+        source: Cow::Borrowed(&graphics_module.source),
     };
-    // let vs_module_descr = compiled_shader_modules.spv_module_for_entry_point(vs_entry_point);
-    // let fs_module_descr = compiled_shader_modules.spv_module_for_entry_point(fs_entry_point);
+    let cs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
+        label: Some(cs_entry_point),
+        source: Cow::Borrowed(&compute_module.source),
+    };
 
+    // Merged
     // HACK(eddyb) avoid calling `device.create_shader_module` twice unnecessarily.
     let vs_fs_same_module = std::ptr::eq(&vs_module_descr.source[..], &fs_module_descr.source[..]);
+    // let vs_cs_same_module = std::ptr::eq(&vs_module_descr.source[..], &cs_module_descr.source[..]);
 
+    // Merged
     let vs_module = &create_module(vs_module_descr);
     let fs_module;
     let fs_module = if vs_fs_same_module {
@@ -323,11 +516,44 @@ fn create_pipeline(
         fs_module = create_module(fs_module_descr);
         &fs_module
     };
+    // let cs_module;
+    // let cs_module = if vs_cs_same_module {
+    //     vs_module
+    // } else {
+    let cs_module = create_module(cs_module_descr);
+        // &cs_module
+    // };
 
-    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+    // Compute
+    let compute_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &[wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            count: None,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                has_dynamic_offset: false,
+                min_binding_size: None,
+                ty: wgpu::BufferBindingType::Storage { read_only: false },
+            },
+        }],
+    });
+
+    // Merged
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&compute_bind_group_layout],
+        push_constant_ranges: &[wgpu::PushConstantRange {
+            stages: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            range: 0..std::mem::size_of::<ShaderConstants>() as u32,
+        }],
+    });
+
+    // Graphics
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         cache: None,
         label: None,
-        layout: Some(pipeline_layout),
+        layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: vs_module,
             entry_point: Some(vs_entry_point),
@@ -360,28 +586,45 @@ fn create_pipeline(
             })],
         }),
         multiview: None,
-    })
+    });
+
+
+    // Compute
+    let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        compilation_options: Default::default(),
+        cache: None,
+        label: None,
+        layout: Some(&pipeline_layout),
+        module: &cs_module,
+        entry_point: Some(cs_entry_point),
+    });
+
+    (pipeline_layout, render_pipeline, compute_pipeline, compute_bind_group_layout)
 }
 
-#[allow(clippy::match_wild_err_arm)]
-pub fn start(
-) {
-    let mut event_loop_builder = EventLoop::with_user_event();
-    let event_loop = event_loop_builder.build().unwrap();
+// Graphics
+fn auto_configure_surface<'a>(
+    adapter: &wgpu::Adapter,
+    device: &wgpu::Device,
+    surface: wgpu::Surface<'a>,
+    size: winit::dpi::PhysicalSize<u32>,
+) -> (wgpu::Surface<'a>, wgpu::SurfaceConfiguration) {
+    let mut surface_config = surface
+        .get_default_config(adapter, size.width, size.height)
+        .unwrap_or_else(|| {
+            panic!(
+                "Missing formats/present modes in surface capabilities: {:#?}",
+                surface.get_capabilities(adapter)
+            )
+        });
 
-    // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
-    // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
-    #[allow(deprecated)]
-    let window = event_loop
-        .create_window(
-            winit::window::Window::default_attributes()
-                .with_title("Rust GPU - wgpu")
-                .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0)),
-        )
-        .unwrap();
+    // FIXME(eddyb) should this be toggled by a CLI arg?
+    // NOTE(eddyb) VSync was disabled in the past, but without VSync,
+    // especially for simpler shaders, you can easily hit thousands
+    // of frames per second, stressing GPUs for no reason.
+    surface_config.present_mode = wgpu::PresentMode::AutoVsync;
 
-    futures::executor::block_on(run(
-        event_loop,
-        window,
-    ));
+    surface.configure(device, &surface_config);
+
+    (surface, surface_config)
 }

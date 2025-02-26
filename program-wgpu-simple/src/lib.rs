@@ -78,5 +78,5 @@ pub fn main(
         return compute::start();
     }
 
-    graphics::start();
+    graphics::run();
 }
