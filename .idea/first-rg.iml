@@ -9,6 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/shader-compute/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/shader-sky/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/shared/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/shader-slime/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -1,15 +1,12 @@
-use crate::{CompiledShaderModules, maybe_watch};
 
 use std::time::Duration;
 use wgpu::util::DeviceExt;
 
 pub fn start() {
-    let compiled_shader_modules = maybe_watch();
-
-    futures::executor::block_on(start_internal(compiled_shader_modules));
+    futures::executor::block_on(start_internal());
 }
 
-async fn start_internal(compiled_shader_modules: CompiledShaderModules) {
+async fn start_internal() {
     let backends = wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
@@ -26,7 +23,7 @@ async fn start_internal(compiled_shader_modules: CompiledShaderModules) {
             .features()
             .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES);
 
-    let mut required_features = if timestamping {
+    let required_features = if timestamping {
         wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
     } else {
         wgpu::Features::empty()
@@ -63,14 +60,20 @@ async fn start_internal(compiled_shader_modules: CompiledShaderModules) {
     let entry_point = "main_cs";
 
     // FIXME(eddyb) automate this decision by default.
-    let module = compiled_shader_modules.spv_module_for_entry_point(entry_point);
+    let module = wgpu::include_spirv_raw!(env!("shader_compute.spv"));
+    // let vs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
+    //     label: vs_entry_point.as_deref(),
+    //     source: Cow::Borrowed(&module.source),
+    // };
+    // let module = compiled_shader_modules.spv_module_for_entry_point(entry_point);
     // let module = if options.force_spirv_passthru {
     //     unsafe { device.create_shader_module_spirv(&module) }
     // } else {
-    let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
+    #[allow(non_upper_case_globals)]
+    pub const main_cs: &str = "main_cs";
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label,
-        source: wgpu::ShaderSource::SpirV(source),
+        label: main_cs.into(),
+        source: wgpu::ShaderSource::SpirV(module.source),
     });
     // };
 

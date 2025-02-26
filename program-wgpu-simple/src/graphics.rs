@@ -1,8 +1,7 @@
-use crate::{CompiledShaderModules, maybe_watch};
-
-use crate::shared::ShaderConstants;
+use std::borrow::Cow;
+use shared::ShaderConstants;
 use winit::{
-    event::{ElementState, Event, MouseButton, WindowEvent},
+    event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
@@ -16,21 +15,13 @@ mod shaders {
 
 }
 
-fn mouse_button_index(button: MouseButton) -> usize {
-    match button {
-        MouseButton::Left => 0,
-        MouseButton::Middle => 1,
-        MouseButton::Right => 2,
-        MouseButton::Back => 3,
-        MouseButton::Forward => 4,
-        MouseButton::Other(i) => 5 + (i as usize),
-    }
+fn _print_type_name<T>(_: T) {
+    println!("{}", std::any::type_name::<T>());
 }
 
 async fn run(
-    event_loop: EventLoop<CompiledShaderModules>,
+    event_loop: EventLoop<()>,
     window: Window,
-    compiled_shader_modules: CompiledShaderModules,
 ) {
     let backends = wgpu::util::backend_bits_from_env()
         .unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::METAL);
@@ -75,7 +66,7 @@ async fn run(
     };
 
     // Create the logical device and command queue
-    let (device, queue) = adapter
+    let (device, queue): (wgpu::Device, wgpu::Queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
@@ -134,17 +125,9 @@ async fn run(
             |pending| pending.preferred_format,
             |(_, surface_config)| surface_config.format,
         ),
-        compiled_shader_modules,
     );
 
     let start = std::time::Instant::now();
-
-    let (mut cursor_x, mut cursor_y) = (0.0, 0.0);
-    let (mut drag_start_x, mut drag_start_y) = (0.0, 0.0);
-    let (mut drag_end_x, mut drag_end_y) = (0.0, 0.0);
-    let mut mouse_button_pressed = 0;
-    let mut mouse_button_press_since_last_frame = 0;
-    let mut mouse_button_press_time = [f32::NEG_INFINITY; 3];
 
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
@@ -241,7 +224,7 @@ async fn run(
                     let mut encoder = device
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
                     {
-                        let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        let mut rpass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                             label: None,
                             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                                 view: &output_view,
@@ -256,25 +239,11 @@ async fn run(
                         });
 
                         let time = start.elapsed().as_secs_f32();
-                        for (i, press_time) in mouse_button_press_time.iter_mut().enumerate() {
-                            if (mouse_button_press_since_last_frame & (1 << i)) != 0 {
-                                *press_time = time;
-                            }
-                        }
-                        mouse_button_press_since_last_frame = 0;
 
                         let push_constants = ShaderConstants {
                             width: window.inner_size().width,
                             height: window.inner_size().height,
                             time,
-                            cursor_x,
-                            cursor_y,
-                            drag_start_x,
-                            drag_start_y,
-                            drag_end_x,
-                            drag_end_y,
-                            mouse_button_pressed,
-                            mouse_button_press_time,
                         };
 
                         rpass.set_pipeline(render_pipeline);
@@ -305,50 +274,6 @@ async fn run(
                     },
                 ..
             } => event_loop_window_target.exit(),
-            Event::WindowEvent {
-                event: WindowEvent::MouseInput { state, button, .. },
-                ..
-            } => {
-                let mask = 1 << mouse_button_index(button);
-                match state {
-                    ElementState::Pressed => {
-                        mouse_button_pressed |= mask;
-                        mouse_button_press_since_last_frame |= mask;
-
-                        if button == MouseButton::Left {
-                            drag_start_x = cursor_x;
-                            drag_start_y = cursor_y;
-                            drag_end_x = cursor_x;
-                            drag_end_y = cursor_y;
-                        }
-                    }
-                    ElementState::Released => mouse_button_pressed &= !mask,
-                }
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CursorMoved { position, .. },
-                ..
-            } => {
-                cursor_x = position.x as f32;
-                cursor_y = position.y as f32;
-                if (mouse_button_pressed & (1 << mouse_button_index(MouseButton::Left))) != 0 {
-                    drag_end_x = cursor_x;
-                    drag_end_y = cursor_y;
-                }
-            }
-            Event::UserEvent(new_module) => {
-                *render_pipeline = create_pipeline(
-                    &device,
-                    &pipeline_layout,
-                    surface_with_config.as_ref().map_or_else(
-                        |pending| pending.preferred_format,
-                        |(_, surface_config)| surface_config.format,
-                    ),
-                    new_module,
-                );
-                window.request_redraw();
-                event_loop_window_target.set_control_flow(ControlFlow::Poll);
-            }
             _ => {}
         }
     }).unwrap();
@@ -358,7 +283,6 @@ fn create_pipeline(
     device: &wgpu::Device,
     pipeline_layout: &wgpu::PipelineLayout,
     surface_format: wgpu::TextureFormat,
-    compiled_shader_modules: CompiledShaderModules,
 ) -> wgpu::RenderPipeline {
     // FIXME(eddyb) automate this decision by default.
     let create_module = |module| {
@@ -376,8 +300,17 @@ fn create_pipeline(
     let vs_entry_point = shaders::main_vs;
     let fs_entry_point = shaders::main_fs;
 
-    let vs_module_descr = compiled_shader_modules.spv_module_for_entry_point(vs_entry_point);
-    let fs_module_descr = compiled_shader_modules.spv_module_for_entry_point(fs_entry_point);
+    let module = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
+    let vs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
+        label: Some(vs_entry_point),
+        source: Cow::Borrowed(&module.source),
+    };
+    let fs_module_descr = wgpu::ShaderModuleDescriptorSpirV {
+        label: Some(fs_entry_point),
+        source: Cow::Borrowed(&module.source),
+    };
+    // let vs_module_descr = compiled_shader_modules.spv_module_for_entry_point(vs_entry_point);
+    // let fs_module_descr = compiled_shader_modules.spv_module_for_entry_point(fs_entry_point);
 
     // HACK(eddyb) avoid calling `device.create_shader_module` twice unnecessarily.
     let vs_fs_same_module = std::ptr::eq(&vs_module_descr.source[..], &fs_module_descr.source[..]);
@@ -436,9 +369,6 @@ pub fn start(
     let mut event_loop_builder = EventLoop::with_user_event();
     let event_loop = event_loop_builder.build().unwrap();
 
-    // Build the shader before we pop open a window, since it might take a while.
-    let initial_shader = maybe_watch();
-
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
     #[allow(deprecated)]
@@ -453,6 +383,5 @@ pub fn start(
     futures::executor::block_on(run(
         event_loop,
         window,
-        initial_shader,
     ));
 }

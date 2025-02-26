@@ -4,9 +4,9 @@
 // HACK(eddyb) can't easily see warnings otherwise from `spirv-builder` builds.
 
 use core::f32::consts::PI;
-use glam::{Vec2, Vec3, Vec4, vec2, vec3};
+use glam::{Vec2, Vec3, Vec4, vec2, vec3, vec4, UVec3};
 use shared::*;
-use spirv_std::spirv;
+use spirv_std::{glam, spirv};
 
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
 // we tie #[no_std] above to the same condition, so it's fine.
@@ -168,6 +168,7 @@ pub fn main_fs(
 ) {
     let frag_coord = vec2(in_frag_coord.x, in_frag_coord.y);
     *output = fs(constants, frag_coord, sun_intensity_extra_spec_const_factor);
+    // *output = vec4(1.0, 1.0, 1.0, 1.0);
 }
 
 #[spirv(vertex)]

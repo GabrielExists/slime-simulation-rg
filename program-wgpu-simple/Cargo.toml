@@ -10,6 +10,7 @@ wgpu = { version = "23", features = ["spirv", "vulkan-portability"]}
 winit = { version = "0.30.0", features = ["android-native-activity", "rwh_05"] }
 bytemuck = { version = "1.18.0", features = ["derive"] }
 futures = { version = "0.3", default-features = false, features = ["std", "executor"] }
+shared = { path = "../shared" }
 
 [build-dependencies]
 spirv-builder = { workspace = true }

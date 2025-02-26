@@ -2,14 +2,16 @@ use spirv_builder::{MetadataPrintout, SpirvBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let crate_path = [manifest_dir, "..", "shader-slime"]
-        .iter()
-        .copied()
-        .collect::<std::path::PathBuf>();
+    for shader_name in ["shader-slime", "shader-compute"] {
+        let crate_path = [manifest_dir, "..", shader_name]
+            .iter()
+            .copied()
+            .collect::<std::path::PathBuf>();
 
-    SpirvBuilder::new(crate_path, "spirv-unknown-vulkan1.1")
-        .print_metadata(MetadataPrintout::Full)
-        .build()?;
+        SpirvBuilder::new(crate_path, "spirv-unknown-vulkan1.1")
+            .print_metadata(MetadataPrintout::Full)
+            .build()?;
+    }
     Ok(())
 }
 

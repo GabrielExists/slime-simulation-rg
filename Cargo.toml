@@ -1,13 +1,10 @@
 [workspace]
 members = [
-    "program-wgpu-hot-reload",
     "program-wgpu-simple",
-    "program-cpu",
     "shader-sky",
     "shader-compute",
     "shader-slime",
     "shared",
-    "builder",
 ]
 default-members = [
     "program-wgpu-simple",
