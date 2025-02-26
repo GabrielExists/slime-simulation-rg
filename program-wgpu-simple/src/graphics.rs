@@ -8,16 +8,6 @@ use winit::{
     window::Window,
 };
 
-mod shaders {
-    // include!(concat!(env!("OUT_DIR"), "/entry_points.rs"));
-    #[allow(non_upper_case_globals)]
-    pub const main_fs: &str = "main_fs";
-    #[allow(non_upper_case_globals)]
-    pub const main_vs: &str = "main_vs";
-    #[allow(non_upper_case_globals)]
-    pub const main_cs: &str = "main_cs";
-}
-
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
 }
@@ -85,27 +75,6 @@ async fn run_inner(
         .await
         .expect("Failed to find an appropriate adapter");
 
-    // Compute
-    // Timestamping may not be supported
-    let timestamping = adapter.features().contains(wgpu::Features::TIMESTAMP_QUERY)
-        && adapter
-        .features()
-        .contains(wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES);
-
-
-    // Merged
-    let required_features = wgpu::Features::PUSH_CONSTANTS | if timestamping {
-        wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
-    } else {
-        wgpu::Features::empty()
-    };
-    // Compute
-    if !timestamping {
-        eprintln!(
-            "Adapter reports that timestamping is not supported - no timing information will be available"
-        );
-    }
-
     // Graphics
     let required_limits = wgpu::Limits {
         max_push_constant_size: 128,
@@ -118,7 +87,7 @@ async fn run_inner(
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                required_features,
+                required_features: wgpu::Features::PUSH_CONSTANTS,
                 required_limits,
                 memory_hints: wgpu::MemoryHints::Performance,
             },
@@ -130,9 +99,6 @@ async fn run_inner(
     // Graphics
     let mut surface_with_config = initial_surface
         .map(|surface| auto_configure_surface(&adapter, &device, surface, window.inner_size()));
-
-    // Load the shaders from disk
-
 
     let (
         render_pipeline_layout,
@@ -219,13 +185,6 @@ async fn run_inner(
                 window.request_redraw();
 
                 // Compute
-                let timestamp_period: Option<f32> = if timestamping {
-                    Some(queue.get_timestamp_period())
-                } else {
-                    None
-                };
-
-                // Compute
                 let top = 2u32.pow(20);
                 let src_range = 1..top;
 
@@ -251,27 +210,6 @@ async fn run_inner(
                         | wgpu::BufferUsages::COPY_SRC,
                 });
 
-                let (timestamp_buffer, timestamp_readback_buffer) = if timestamping {
-                    let timestamp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("Timestamps buffer"),
-                        size: 16,
-                        usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
-                        mapped_at_creation: false,
-                    });
-
-                    let timestamp_readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                        label: None,
-                        size: 16,
-                        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: true,
-                    });
-                    timestamp_readback_buffer.unmap();
-
-                    (Some(timestamp_buffer), Some(timestamp_readback_buffer))
-                } else {
-                    (None, None)
-                };
-
                 let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: None,
                     layout: &compute_bind_group_layout,
@@ -281,15 +219,6 @@ async fn run_inner(
                     }],
                 });
 
-                let queries = if timestamping {
-                    Some(device.create_query_set(&wgpu::QuerySetDescriptor {
-                        label: None,
-                        count: 2,
-                        ty: wgpu::QueryType::Timestamp,
-                    }))
-                } else {
-                    None
-                };
 
                 // Run compute pass
                 let mut compute_encoder =
@@ -299,17 +228,7 @@ async fn run_inner(
                     let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
                     cpass.set_bind_group(0, &bind_group, &[]);
                     cpass.set_pipeline(&compute_pipeline);
-                    if timestamping {
-                        if let Some(queries) = queries.as_ref() {
-                            cpass.write_timestamp(queries, 0);
-                        }
-                    }
                     cpass.dispatch_workgroups(src_range.len() as u32 / 64, 1, 1);
-                    if timestamping {
-                        if let Some(queries) = queries.as_ref() {
-                            cpass.write_timestamp(queries, 1);
-                        }
-                    }
                 }
 
                 compute_encoder.copy_buffer_to_buffer(
@@ -320,22 +239,6 @@ async fn run_inner(
                     src.len() as wgpu::BufferAddress,
                 );
 
-                if timestamping {
-                    if let (Some(queries), Some(timestamp_buffer), Some(timestamp_readback_buffer)) = (
-                        queries.as_ref(),
-                        timestamp_buffer.as_ref(),
-                        timestamp_readback_buffer.as_ref(),
-                    ) {
-                        compute_encoder.resolve_query_set(queries, 0..2, timestamp_buffer, 0);
-                        compute_encoder.copy_buffer_to_buffer(
-                            timestamp_buffer,
-                            0,
-                            timestamp_readback_buffer,
-                            0,
-                            timestamp_buffer.size(),
-                        );
-                    }
-                }
 
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
                     let output = match surface.get_current_texture() {
@@ -396,39 +299,10 @@ async fn run_inner(
 
                     // Compute
                     let buffer_slice = readback_buffer.slice(..);
-                    if timestamping {
-                        if let Some(timestamp_readback_buffer) = timestamp_readback_buffer.as_ref() {
-                            let timestamp_slice = timestamp_readback_buffer.slice(..);
-                            timestamp_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
-                        }
-                    }
                     buffer_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
                     // NOTE(eddyb) `poll` should return only after the above callbacks fire
                     // (see also https://github.com/gfx-rs/wgpu/pull/2698 for more details).
                     device.poll(wgpu::Maintain::Wait);
-
-                    if timestamping {
-                        if let (Some(timestamp_readback_buffer), Some(timestamp_period)) =
-                            (timestamp_readback_buffer.as_ref(), timestamp_period)
-                        {
-                            {
-                                let timing_data = timestamp_readback_buffer.slice(..).get_mapped_range();
-                                let timings = timing_data
-                                    .chunks_exact(8)
-                                    .map(|b| u64::from_ne_bytes(b.try_into().unwrap()))
-                                    .collect::<Vec<_>>();
-
-                                println!(
-                                    "Took: {:?}",
-                                    Duration::from_nanos(
-                                        ((timings[1] - timings[0]) as f64 * f64::from(timestamp_period)) as u64
-                                    )
-                                );
-                                drop(timing_data);
-                                timestamp_readback_buffer.unmap();
-                            }
-                        }
-                    }
 
                     let data = buffer_slice.get_mapped_range();
                     let result = data
@@ -484,9 +358,9 @@ fn create_pipeline(
     };
 
     // Merged
-    let vs_entry_point = shaders::main_vs;
-    let fs_entry_point = shaders::main_fs;
-    let cs_entry_point = shaders::main_cs;
+    let vs_entry_point = "main_vs";
+    let fs_entry_point = "main_fs";
+    let cs_entry_point = "main_cs";
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = &create_module(module_raw);
 
