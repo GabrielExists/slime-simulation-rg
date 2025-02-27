@@ -20,7 +20,6 @@ fn hash(mut state: u32) -> u32 {
     state
 }
 
-// LocalSize/numthreads of (x = 64, y = 1, z = 1)
 #[spirv(compute(threads(16)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -47,6 +46,25 @@ pub fn main_cs(
         trail_buffer[pixel_index] = 0xFFFFFFFF;
     }
 }
+
+#[spirv(compute(threads(16, 16)))]
+pub fn diffuse_cs(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(push_constant)] constants: &ShaderConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
+) {
+    let index = id.y as usize * constants.width as usize + id.x as usize;
+    if id.x >= constants.width || id.y >= constants.height {
+        return;
+    }
+    let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
+    if id.y as usize == id.x as usize {
+        trail_buffer[index] = 0xFFFFFFFF;
+    } else {
+        trail_buffer[index] = hashed;
+    }
+}
+
 #[spirv(fragment)]
 pub fn main_fs(
     #[spirv(frag_coord)] in_frag_coord: Vec4,

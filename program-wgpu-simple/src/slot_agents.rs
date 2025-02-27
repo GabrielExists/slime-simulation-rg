@@ -24,9 +24,8 @@ impl Slot for SlotAgents {
     type Buffers = SlotAgentsBuffers;
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
-        let num_agents = 256;
         let agent_bytes = std::iter::repeat(())
-            .take(num_agents)
+            .take(configuration::NUM_AGENTS as usize)
             .flat_map(|()| {
                 let agent = shared::Agent {
                     x: program_buffers.width as f32 / 2.0,

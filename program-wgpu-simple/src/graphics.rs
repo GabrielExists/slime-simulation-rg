@@ -1,4 +1,5 @@
 use shared::ShaderConstants;
+use crate::slot_diffuse::SlotDiffuse;
 use crate::slots;
 use winit::{
     event::{Event, WindowEvent},
@@ -154,6 +155,7 @@ async fn run_inner(
     let mut program_buffers = slots::create_buffers(&program_init, window.inner_size());
 
     let mut slot_agents = SlotAgents::create(&program_init, &program_buffers);
+    let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers);
     let mut slot_render = SlotRender::create(&program_init, &program_buffers);
 
     let start = std::time::Instant::now();
@@ -208,6 +210,7 @@ async fn run_inner(
                         surface.configure(&program_init.device, surface_config);
                         program_buffers = slots::create_buffers(&program_init, size);
                         slot_agents.recreate_buffers(&program_init, &program_buffers);
+                        slot_diffuse.recreate_buffers(&program_init, &program_buffers);
                         slot_render.recreate_buffers(&program_init, &program_buffers);
                         last_time = std::time::Instant::now();
                     }
@@ -252,6 +255,7 @@ async fn run_inner(
                     };
 
                     slot_agents.on_loop(&program_init, &program_buffers, &frame);
+                    slot_diffuse.on_loop(&program_init, &program_buffers, &frame);
                     slot_render.on_loop(&program_init, &program_buffers, &frame);
 
                     frame.output.present();
