@@ -54,15 +54,10 @@ pub fn diffuse_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
 ) {
     let index = id.y as usize * constants.width as usize + id.x as usize;
-    if id.x >= constants.width || id.y >= constants.height {
-        return;
-    }
-    let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
-    if id.y as usize == id.x as usize {
-        trail_buffer[index] = 0xFFFFFFFF;
-    } else {
-        trail_buffer[index] = hashed;
-    }
+    let original = trail_buffer[index];
+    let evaporation_this_tick = (constants.evaporate_speed * u32::MAX as f32 / 100.0) * constants.delta_time;
+    let new_value = f32::max(0.0, original as f32 - evaporation_this_tick) as u32;
+    trail_buffer[index] = new_value;
 }
 
 #[spirv(fragment)]

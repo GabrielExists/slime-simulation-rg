@@ -23,11 +23,16 @@ pub struct ShaderConstants {
     pub delta_time: f32,
     pub num_agents: u32,
     pub agent_stats: [AgentStats; 1],
+    // Percent of full white to black transition per second.
+    // 100.0 is completely faded after 1 second.
+    // 50.0 is completely faded after 2 seconds.
+    pub evaporate_speed: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
+    // Pixels travelled per second
     pub velocity: f32,
 }
 
