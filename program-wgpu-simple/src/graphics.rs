@@ -1,4 +1,3 @@
-use wgpu::TextureViewDescriptor;
 use shared::ShaderConstants;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -6,8 +5,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
-
-const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -23,7 +20,7 @@ pub fn run() {
     #[allow(deprecated)]
         let window = event_loop
         .create_window(
-            winit::window::Window::default_attributes()
+            Window::default_attributes()
                 .with_title("Rust GPU - wgpu")
                 .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0)),
         )
@@ -102,11 +99,12 @@ async fn run_inner(
         .map(|surface| auto_configure_surface(&adapter, &device, surface, window.inner_size()));
 
     let (
-        render_pipeline_layout,
         compute_pipeline_layout,
-        mut render_pipeline,
+        render_pipeline_layout,
         compute_pipeline,
+        render_pipeline,
         compute_bind_group_layout,
+        render_bind_group_layout,
     ) = create_pipeline(
         &device,
         surface_with_config.as_ref().map_or_else(
@@ -127,37 +125,37 @@ async fn run_inner(
         .collect::<Vec<_>>();
 
     // Compute
-    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: None,
-        size: num_pixels as wgpu::BufferAddress,
-        // Can be read to the CPU, and can be copied from the shader's storage buffer
-        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-
-    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Collatz Conjecture Input"),
+    // let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    //     label: None,
+    //     size: num_pixels as wgpu::BufferAddress,
+    //     // Can be read to the CPU, and can be copied from the shader's storage buffer
+    //     usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+    //     mapped_at_creation: false,
+    // });
+    let pixel_input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Pixel input buffer"),
         contents: &empty_bytes,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
     });
-    let storage_texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("Storage texture - noise"),
-        size: wgpu::Extent3d{
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: TEXTURE_FORMAT,
-        usage: wgpu::TextureUsages::STORAGE_BINDING,
-        view_formats: &[TEXTURE_FORMAT],
+
+    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Generic storage buffer"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+    });
+    let trail_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Trail buffer"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
     });
 
-    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("compute bind group"),
         layout: &compute_bind_group_layout,
         entries: &[
@@ -167,16 +165,18 @@ async fn run_inner(
             },
             wgpu::BindGroupEntry {
                 binding: 1,
-                resource: wgpu::BindingResource::TextureView(&storage_texture.create_view(&TextureViewDescriptor {
-                    label: Some("Noiseview"),
-                    format: Some(TEXTURE_FORMAT),
-                    dimension: Some(wgpu::TextureViewDimension::D2),
-                    aspect: wgpu::TextureAspect::All,
-                    base_mip_level: 0,
-                    mip_level_count: None,
-                    base_array_layer: 0,
-                    array_layer_count: None,
-                })),
+                resource: trail_buffer.as_entire_binding(),
+            },
+        ],
+    });
+
+    let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("render bind group"),
+        layout: &render_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: pixel_input_buffer.as_entire_binding(),
             },
         ],
     });
@@ -189,7 +189,7 @@ async fn run_inner(
         // `event_loop.run` never returns, therefore we must do this to ensure
         // the resources are properly cleaned up.
         let _ = (&instance, &adapter, &render_pipeline_layout, &compute_pipeline_layout);
-        let render_pipeline = &mut render_pipeline;
+        let render_pipeline = &render_pipeline;
 
         event_loop_window_target.set_control_flow(ControlFlow::Wait);
         match event {
@@ -262,7 +262,7 @@ async fn run_inner(
 
                 {
                     let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
-                    cpass.set_bind_group(0, &bind_group, &[]);
+                    cpass.set_bind_group(0, &compute_bind_group, &[]);
                     cpass.set_pipeline(&compute_pipeline);
                     cpass.set_push_constants(
                         0,
@@ -274,11 +274,12 @@ async fn run_inner(
                 compute_encoder.copy_buffer_to_buffer(
                     &storage_buffer,
                     0,
-                    &readback_buffer,
+                    &pixel_input_buffer,
                     0,
                     num_pixels as wgpu::BufferAddress,
 
                 );
+                queue.submit([compute_encoder.finish()]);
 
 
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
@@ -319,6 +320,7 @@ async fn run_inner(
                         });
 
                         rpass.set_pipeline(render_pipeline);
+                        rpass.set_bind_group(0, &render_bind_group, &[]);
                         rpass.set_push_constants(
                             wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                             0,
@@ -327,23 +329,23 @@ async fn run_inner(
                         rpass.draw(0..3, 0..1);
                     }
 
-                    queue.submit([compute_encoder.finish(), graphics_encoder.finish()]);
+                    queue.submit([graphics_encoder.finish()]);
                     output.present();
 
-                    // Compute
-                    let buffer_slice = readback_buffer.slice(..);
-                    buffer_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
-                    // NOTE(eddyb) `poll` should return only after the above callbacks fire
-                    // (see also https://github.com/gfx-rs/wgpu/pull/2698 for more details).
-                    device.poll(wgpu::Maintain::Wait);
-
-                    let data = buffer_slice.get_mapped_range();
-                    let _result = data
-                        .chunks_exact(4)
-                        .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
-                        .collect::<Vec<_>>();
-                    drop(data);
-                    readback_buffer.unmap();
+                    // // Compute
+                    // let buffer_slice = readback_buffer.slice(..);
+                    // buffer_slice.map_async(wgpu::MapMode::Read, |r| r.unwrap());
+                    // // NOTE(eddyb) `poll` should return only after the above callbacks fire
+                    // // (see also https://github.com/gfx-rs/wgpu/pull/2698 for more details).
+                    // device.poll(wgpu::Maintain::Wait);
+                    //
+                    // let data = buffer_slice.get_mapped_range();
+                    // let _result = data
+                    //     .chunks_exact(4)
+                    //     .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
+                    //     .collect::<Vec<_>>();
+                    // drop(data);
+                    // readback_buffer.unmap();
 
                     // let mut max = 0;
                     // for (src, out) in src_range.clone().zip(result.iter().copied()) {
@@ -381,7 +383,7 @@ async fn run_inner(
 fn create_pipeline(
     device: &wgpu::Device,
     surface_format: wgpu::TextureFormat,
-) -> (wgpu::PipelineLayout, wgpu::PipelineLayout, wgpu::RenderPipeline, wgpu::ComputePipeline, wgpu::BindGroupLayout) {
+) -> (wgpu::PipelineLayout, wgpu::PipelineLayout, wgpu::ComputePipeline, wgpu::RenderPipeline, wgpu::BindGroupLayout, wgpu::BindGroupLayout) {
     let create_module = |module| {
         let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
         device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -396,6 +398,23 @@ fn create_pipeline(
     let cs_entry_point = "main_cs";
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = &create_module(module_raw);
+
+    // Graphics
+    let render_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: None,
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                count: None,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
+            },
+        ],
+    });
 
     // Compute
     let compute_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -415,11 +434,11 @@ fn create_pipeline(
                 binding: 1,
                 count: None,
                 visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::StorageTexture {
-                    access: wgpu::StorageTextureAccess::ReadWrite,
-                    format: TEXTURE_FORMAT,
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                }
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
             },
         ],
     });
@@ -427,7 +446,7 @@ fn create_pipeline(
     // Merged
     let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render pipeline layout"),
-        bind_group_layouts: &[],
+        bind_group_layouts: &[&render_bind_group_layout],
         push_constant_ranges: &[wgpu::PushConstantRange {
             stages: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
             range: 0..std::mem::size_of::<ShaderConstants>() as u32,
@@ -493,7 +512,7 @@ fn create_pipeline(
         entry_point: Some(cs_entry_point),
     });
 
-    (render_pipeline_layout, compute_pipeline_layout, render_pipeline, compute_pipeline, compute_bind_group_layout)
+    (compute_pipeline_layout, render_pipeline_layout, compute_pipeline, render_pipeline, compute_bind_group_layout, render_bind_group_layout)
 }
 
 // Graphics
