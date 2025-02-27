@@ -69,5 +69,10 @@
 )]
 
 mod graphics;
+mod slots;
+mod slot_render;
+mod slot_agents;
+mod slot_diffuse;
+
 pub use graphics::run;
 
