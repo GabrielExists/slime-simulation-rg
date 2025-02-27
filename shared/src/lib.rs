@@ -27,6 +27,7 @@ pub struct ShaderConstants {
     // 100.0 is completely faded after 1 second.
     // 50.0 is completely faded after 2 seconds.
     pub evaporate_speed: f32,
+    pub diffuse_speed: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]

@@ -11,17 +11,6 @@ use spirv_std::{glam, spirv};
 #[cfg(target_arch = "spirv")]
 use spirv_std::num_traits::Float;
 
-
-fn hash(mut state: u32) -> u32 {
-    state ^= 2747636419u32;
-    state *= 2654435769u32;
-    state ^= state >> 16;
-    state *= 2654435769u32;
-    state ^= state >> 16;
-    state *= 2654435769u32;
-    state
-}
-
 #[spirv(compute(threads(16)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -57,8 +46,30 @@ pub fn diffuse_cs(
 ) {
     let index = id.y as usize * constants.width as usize + id.x as usize;
     let original = trail_buffer[index];
+
+    let mut sum = 0.0;
+    for offset_x in -1..=1 {
+        for offset_y in -1..=1 {
+            let sample_x = id.x as i32 + offset_x;
+            let sample_y = id.y as i32 + offset_y;
+            if sample_x >= 0 && sample_x < constants.width as i32 && sample_y >= 0 && sample_y < constants.height as i32 {
+                let sample_index: usize = sample_y as usize * constants.width as usize + sample_x as usize;
+                sum += trail_buffer[sample_index] as f32 / u32::MAX as f32;
+            }
+        }
+    }
+    let blur_result = sum / 9.0;
+    let diffused_value = lerp(
+        original as f32 / u32::MAX as f32,
+        blur_result,
+        (constants.diffuse_speed / 100.0) * constants.delta_time
+    );
+    let diffused_upscaled = diffused_value * u32::MAX as f32;
+    // trail_buffer[index] = (diffused_value * u32::MAX as f32) as u32;
+
+
     let evaporation_this_tick = (constants.evaporate_speed * u32::MAX as f32 / 100.0) * constants.delta_time;
-    let new_value = f32::max(0.0, original as f32 - evaporation_this_tick) as u32;
+    let new_value = f32::max(0.0, diffused_upscaled - evaporation_this_tick) as u32;
     trail_buffer[index] = new_value;
 }
 
@@ -90,3 +101,18 @@ pub fn main_vs(#[spirv(vertex_index)] vert_idx: i32, #[spirv(position)] builtin_
 
     *builtin_pos = pos.extend(0.0).extend(1.0);
 }
+
+fn lerp(from: f32, to: f32, interpolation: f32) -> f32 {
+    from + (to - from) * interpolation
+}
+
+fn hash(mut state: u32) -> u32 {
+    state ^= 2747636419u32;
+    state *= 2654435769u32;
+    state ^= state >> 16;
+    state *= 2654435769u32;
+    state ^= state >> 16;
+    state *= 2654435769u32;
+    state
+}
+

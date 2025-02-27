@@ -249,6 +249,7 @@ async fn run_inner(
                         num_agents: configuration::NUM_AGENTS,
                         agent_stats: configuration::AGENT_STATS,
                         evaporate_speed: configuration::EVAPORATION_SPEED,
+                        diffuse_speed: configuration::DIFFUSION_SPEED,
                     };
                     let frame = Frame {
                         output,
