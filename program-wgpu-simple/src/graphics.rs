@@ -359,8 +359,8 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
         .take(num_agents)
         .flat_map(|()| {
             let agent = shared::Agent {
-                x: rand::rng().random_range(0..width) as f32,
-                y: rand::rng().random_range(0..height) as f32,
+                x: width as f32 / 2.0,
+                y: height as f32 / 2.0,
                 angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
             };
             bytemuck::bytes_of(&agent).to_vec()
