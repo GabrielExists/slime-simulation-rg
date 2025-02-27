@@ -1,5 +1,4 @@
-use std::borrow::Cow;
-use std::time::Duration;
+use wgpu::TextureViewDescriptor;
 use shared::ShaderConstants;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -7,6 +6,8 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+
+const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -87,7 +88,7 @@ async fn run_inner(
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                required_features: wgpu::Features::PUSH_CONSTANTS,
+                required_features: wgpu::Features::PUSH_CONSTANTS | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
                 required_limits,
                 memory_hints: wgpu::MemoryHints::Performance,
             },
@@ -115,6 +116,70 @@ async fn run_inner(
     );
 
     let start = std::time::Instant::now();
+
+    let width = window.inner_size().width;
+    let height = window.inner_size().height;
+    let num_pixels = width * height;
+
+    let empty_bytes = std::iter::repeat(0)
+        .take(num_pixels as usize)
+        .flat_map(u32::to_ne_bytes)
+        .collect::<Vec<_>>();
+
+    // Compute
+    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: None,
+        size: num_pixels as wgpu::BufferAddress,
+        // Can be read to the CPU, and can be copied from the shader's storage buffer
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
+    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Collatz Conjecture Input"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+    });
+    let storage_texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Storage texture - noise"),
+        size: wgpu::Extent3d{
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: TEXTURE_FORMAT,
+        usage: wgpu::TextureUsages::STORAGE_BINDING,
+        view_formats: &[TEXTURE_FORMAT],
+    });
+
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("compute bind group"),
+        layout: &compute_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: storage_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::TextureView(&storage_texture.create_view(&TextureViewDescriptor {
+                    label: Some("Noiseview"),
+                    format: Some(TEXTURE_FORMAT),
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    aspect: wgpu::TextureAspect::All,
+                    base_mip_level: 0,
+                    mip_level_count: None,
+                    base_array_layer: 0,
+                    array_layer_count: None,
+                })),
+            },
+        ],
+    });
 
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
@@ -181,44 +246,15 @@ async fn run_inner(
                 event: WindowEvent::RedrawRequested,
                 ..
             } => {
+                let time = start.elapsed().as_secs_f32();
+                let push_constants = ShaderConstants {
+                    width: window.inner_size().width,
+                    height: window.inner_size().height,
+                    time,
+                };
+
                 // Graphics
                 window.request_redraw();
-
-                // Compute
-                let top = 2u32.pow(20);
-                let src_range = 1..top;
-
-                let src = src_range
-                    .clone()
-                    .flat_map(u32::to_ne_bytes)
-                    .collect::<Vec<_>>();
-
-                // Compute
-                let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: None,
-                    size: src.len() as wgpu::BufferAddress,
-                    // Can be read to the CPU, and can be copied from the shader's storage buffer
-                    usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                });
-
-                let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Collatz Conjecture Input"),
-                    contents: &src,
-                    usage: wgpu::BufferUsages::STORAGE
-                        | wgpu::BufferUsages::COPY_DST
-                        | wgpu::BufferUsages::COPY_SRC,
-                });
-
-                let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &compute_bind_group_layout,
-                    entries: &[wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: storage_buffer.as_entire_binding(),
-                    }],
-                });
-
 
                 // Run compute pass
                 let mut compute_encoder =
@@ -228,7 +264,11 @@ async fn run_inner(
                     let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
                     cpass.set_bind_group(0, &bind_group, &[]);
                     cpass.set_pipeline(&compute_pipeline);
-                    cpass.dispatch_workgroups(src_range.len() as u32 / 64, 1, 1);
+                    cpass.set_push_constants(
+                        0,
+                        bytemuck::bytes_of(&push_constants),
+                    );
+                    cpass.dispatch_workgroups(width.div_ceil(16) as u32, height.div_ceil(16), 1);
                 }
 
                 compute_encoder.copy_buffer_to_buffer(
@@ -236,7 +276,8 @@ async fn run_inner(
                     0,
                     &readback_buffer,
                     0,
-                    src.len() as wgpu::BufferAddress,
+                    num_pixels as wgpu::BufferAddress,
+
                 );
 
 
@@ -277,14 +318,6 @@ async fn run_inner(
                             ..Default::default()
                         });
 
-                        let time = start.elapsed().as_secs_f32();
-
-                        let push_constants = ShaderConstants {
-                            width: window.inner_size().width,
-                            height: window.inner_size().height,
-                            time,
-                        };
-
                         rpass.set_pipeline(render_pipeline);
                         rpass.set_push_constants(
                             wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
@@ -305,24 +338,24 @@ async fn run_inner(
                     device.poll(wgpu::Maintain::Wait);
 
                     let data = buffer_slice.get_mapped_range();
-                    let result = data
+                    let _result = data
                         .chunks_exact(4)
                         .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
                         .collect::<Vec<_>>();
                     drop(data);
                     readback_buffer.unmap();
 
-                    let mut max = 0;
-                    for (src, out) in src_range.zip(result.iter().copied()) {
-                        if out == u32::MAX {
-                            println!("{src}: overflowed");
-                            break;
-                        } else if out > max {
-                            max = out;
-                            // Should produce <https://oeis.org/A006877>
-                            println!("{src}: {out}");
-                        }
-                    }
+                    // let mut max = 0;
+                    // for (src, out) in src_range.clone().zip(result.iter().copied()) {
+                    //     if out == u32::MAX {
+                    //         println!("{src}: overflowed");
+                    //         break;
+                    //     } else if out > max {
+                    //         max = out;
+                    //         // Should produce <https://oeis.org/A006877>
+                    //         println!("{src}: {out}");
+                    //     }
+                    // }
                 }
             }
             Event::WindowEvent {
@@ -378,6 +411,16 @@ fn create_pipeline(
                     ty: wgpu::BufferBindingType::Storage { read_only: false },
                 },
             },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                count: None,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::StorageTexture {
+                    access: wgpu::StorageTextureAccess::ReadWrite,
+                    format: TEXTURE_FORMAT,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                }
+            },
         ],
     });
 
@@ -393,7 +436,10 @@ fn create_pipeline(
     let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Compute pipeline layout"),
         bind_group_layouts: &[&compute_bind_group_layout],
-        push_constant_ranges: &[],
+        push_constant_ranges: &[wgpu::PushConstantRange {
+            stages: wgpu::ShaderStages::COMPUTE,
+            range: 0..std::mem::size_of::<ShaderConstants>() as u32,
+        }],
     });
 
 

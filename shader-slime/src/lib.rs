@@ -7,6 +7,16 @@ use glam::{Vec2, Vec3, Vec4, vec2, vec3, UVec3};
 use shared::*;
 use spirv_std::{glam, spirv};
 
+fn hash(mut state: u32) -> u32 {
+    state ^= 2747636419u32;
+    state *= 2654435769u32;
+    state ^= state >> 16;
+    state *= 2654435769u32;
+    state ^= state >> 16;
+    state *= 2654435769u32;
+    state
+}
+
 // Adapted from the wgpu hello-compute example
 
 pub fn collatz(mut n: u32) -> Option<u32> {
@@ -31,13 +41,17 @@ pub fn collatz(mut n: u32) -> Option<u32> {
 }
 
 // LocalSize/numthreads of (x = 64, y = 1, z = 1)
-#[spirv(compute(threads(64)))]
+#[spirv(compute(threads(16, 16)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] prime_indices: &mut [u32],
+    #[spirv(push_constant)] constants: &ShaderConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] screen_buffer: &mut [u32],
 ) {
-    let index = id.x as usize;
-    prime_indices[index] = collatz(prime_indices[index]).unwrap_or(u32::MAX);
+    if id.x >= constants.width || id.y >= constants.height {
+        return;
+    }
+    let index = id.y as usize * constants.width as usize + id.x as usize;
+    screen_buffer[index] = hash(index as u32 * constants.time as u32);
 }
 
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
