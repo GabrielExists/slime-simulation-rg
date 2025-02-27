@@ -1,5 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+mod lerp_test;
+
 use core::f32::consts::PI;
 use glam::{Vec2, Vec4, vec2, UVec3, vec4};
 use shared::*;
