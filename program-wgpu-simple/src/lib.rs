@@ -73,6 +73,7 @@ mod slots;
 mod slot_render;
 mod slot_agents;
 mod slot_diffuse;
+mod configuration;
 
 pub use graphics::run;
 

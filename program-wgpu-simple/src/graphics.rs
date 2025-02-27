@@ -1,7 +1,5 @@
-use rand::Rng;
-use shared::{AgentStats, ShaderConstants};
+use shared::ShaderConstants;
 use crate::slots;
-use wgpu::util::DeviceExt;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -11,6 +9,7 @@ use crate::slot_agents::SlotAgents;
 use crate::slot_render::SlotRender;
 use slots::{Frame, ProgramInit};
 use slots::Slot;
+use crate::configuration;
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -145,33 +144,11 @@ async fn run_inner(
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = create_module(module_raw);
 
-    let num_agents = 256;
-    let agent_bytes = std::iter::repeat(())
-        .take(num_agents)
-        .flat_map(|()| {
-            let agent = shared::Agent {
-                x: window.inner_size().width as f32 / 2.0,
-                y: window.inner_size().height as f32 / 2.0,
-                angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
-            };
-            bytemuck::bytes_of(&agent).to_vec()
-        })
-        .collect::<Vec<_>>();
-
-    let agents_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Agent buffer"),
-        contents: &agent_bytes,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
     let program_init = ProgramInit {
         device,
         surface_format,
         module,
         queue,
-        num_agents: num_agents as u32,
-        agents_buffer,
     };
 
     let mut program_buffers = slots::create_buffers(&program_init, window.inner_size());
@@ -232,6 +209,7 @@ async fn run_inner(
                         program_buffers = slots::create_buffers(&program_init, size);
                         slot_agents.recreate_buffers(&program_init, &program_buffers);
                         slot_render.recreate_buffers(&program_init, &program_buffers);
+                        last_time = std::time::Instant::now();
                     }
                 }
             }
@@ -265,10 +243,8 @@ async fn run_inner(
                         height: program_buffers.height,
                         time,
                         delta_time,
-                        num_agents: program_init.num_agents,
-                        agent_stats: [AgentStats {
-                            velocity: 50.0,
-                        }],
+                        num_agents: configuration::NUM_AGENTS,
+                        agent_stats: configuration::AGENT_STATS,
                     };
                     let frame = Frame {
                         output,

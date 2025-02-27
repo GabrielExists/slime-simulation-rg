@@ -1,5 +1,8 @@
+use rand::Rng;
 use shared::ShaderConstants;
 use crate::slots::*;
+use wgpu::util::DeviceExt;
+use crate::configuration;
 
 const CS_ENTRY_POINT: &str = "main_cs";
 
@@ -10,6 +13,7 @@ pub struct SlotAgents {
 pub struct SlotAgentsInit {
     pub compute_pipeline: wgpu::ComputePipeline,
     pub compute_bind_group_layout: wgpu::BindGroupLayout,
+    pub agents_buffer: wgpu::Buffer,
 }
 pub struct SlotAgentsBuffers {
     pub compute_bind_group: wgpu::BindGroup,
@@ -20,6 +24,26 @@ impl Slot for SlotAgents {
     type Buffers = SlotAgentsBuffers;
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+        let num_agents = 256;
+        let agent_bytes = std::iter::repeat(())
+            .take(num_agents)
+            .flat_map(|()| {
+                let agent = shared::Agent {
+                    x: program_buffers.width as f32 / 2.0,
+                    y: program_buffers.height as f32 / 2.0,
+                    angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
+                };
+                bytemuck::bytes_of(&agent).to_vec()
+            })
+            .collect::<Vec<_>>();
+
+        let agents_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Agent buffer"),
+            contents: &agent_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
         let compute_bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
@@ -68,6 +92,7 @@ impl Slot for SlotAgents {
         let init = SlotAgentsInit {
             compute_pipeline,
             compute_bind_group_layout,
+            agents_buffer,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
         Self {
@@ -83,7 +108,7 @@ impl Slot for SlotAgents {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: program_init.agents_buffer.as_entire_binding(),
+                    resource: init.agents_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -114,7 +139,7 @@ impl Slot for SlotAgents {
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
             );
-            cpass.dispatch_workgroups(program_init.num_agents.div_ceil(16), 1, 1);
+            cpass.dispatch_workgroups(configuration::NUM_AGENTS.div_ceil(16), 1, 1);
         }
 
         compute_encoder.copy_buffer_to_buffer(

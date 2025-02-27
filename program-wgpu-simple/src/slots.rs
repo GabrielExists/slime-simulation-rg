@@ -22,9 +22,6 @@ pub struct ProgramInit {
     pub surface_format: wgpu::TextureFormat,
     pub module: wgpu::ShaderModule,
     pub queue: wgpu::Queue,
-
-    pub num_agents: u32,
-    pub agents_buffer: wgpu::Buffer,
 }
 
 // Data regenerated when window is resized
