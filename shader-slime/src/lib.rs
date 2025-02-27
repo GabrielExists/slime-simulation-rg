@@ -32,17 +32,13 @@ pub fn main_cs(
     let agent = &mut agents_buffer[agent_index];
     let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
 
-    let mut new_x = agent.x + agent.angle.cos() * constants.agent_stats[0].velocity;
-    let mut new_y = agent.y + agent.angle.sin() * constants.agent_stats[0].velocity;
+    let mut new_x = agent.x + agent.angle.cos() * constants.agent_stats[0].velocity * constants.delta_time;
+    let mut new_y = agent.y + agent.angle.sin() * constants.agent_stats[0].velocity * constants.delta_time;
     if new_x < 0.0 || new_x > constants.width as f32 || new_y < 0.0 || new_y > constants.height as f32 {
         new_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, new_x));
         new_y = f32::min(constants.height as f32 - 0.01, f32::max(0.0, new_y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
-    // if new_x < constants.width as f32 && new_y < constants.height as f32 {
-    //     let pixel_index = new_y as usize * constants.width as usize + new_x as usize;
-    //     trail_buffer[pixel_index] = 0xFFFFFFFF;
-    // }
     agent.x = new_x;
     agent.y = new_y;
 
@@ -50,26 +46,7 @@ pub fn main_cs(
         let pixel_index = agent.y as usize * constants.width as usize + agent.x as usize;
         trail_buffer[pixel_index] = 0xFFFFFFFF;
     }
-
-    // agent.x = new_x;
-    // agent.y = new_y;
-
-    // let pixel_index = agent.y as usize * constants.width as usize + agent.x as usize;
-    // if id.x < constants.width || id.y < constants.height {
-    // trail_buffer[pixel_index] = 0xFFFFFFFF
-
-    // let index = id.y as usize * constants.width as usize + id.x as usize;
-    // if id.x >= constants.width || id.y >= constants.height {
-    //     return;
-    // }
-    // let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
-    // if id.y as usize == id.x as usize {
-    //     trail_buffer[index] = 0xFFFFFFFF;
-    // } else {
-    //     trail_buffer[index] = hashed;
-    // }
 }
-
 #[spirv(fragment)]
 pub fn main_fs(
     #[spirv(frag_coord)] in_frag_coord: Vec4,

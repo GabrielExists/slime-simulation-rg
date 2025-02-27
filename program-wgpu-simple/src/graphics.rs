@@ -211,7 +211,7 @@ async fn run_inner(
                     delta_time,
                     num_agents: buffers.num_agents,
                     agent_stats: [AgentStats {
-                        velocity: 0.1,
+                        velocity: 50.0,
                     }],
                 };
 
