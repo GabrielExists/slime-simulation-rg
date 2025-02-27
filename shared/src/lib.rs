@@ -20,7 +20,15 @@ pub struct ShaderConstants {
     pub width: u32,
     pub height: u32,
     pub time: f32,
+    pub delta_time: f32,
     pub num_agents: u32,
+    pub agent_stats: [AgentStats; 1],
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct AgentStats {
+    pub velocity: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]

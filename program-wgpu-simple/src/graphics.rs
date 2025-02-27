@@ -1,6 +1,6 @@
 use rand::Rng;
 use wgpu::{BindGroupLayout, COPY_BUFFER_ALIGNMENT, Device};
-use shared::ShaderConstants;
+use shared::{AgentStats, ShaderConstants};
 use wgpu::util::DeviceExt;
 use winit::{
     event::{Event, WindowEvent},
@@ -131,6 +131,7 @@ async fn run_inner(
     );
 
     let start = std::time::Instant::now();
+    let mut last_time = start;
 
 
     // Compute
@@ -201,11 +202,17 @@ async fn run_inner(
                 ..
             } => {
                 let time = start.elapsed().as_secs_f32();
+                let delta_time = last_time.elapsed().as_secs_f32();
+                last_time = std::time::Instant::now();
                 let push_constants = ShaderConstants {
                     width: buffers.width,
                     height: buffers.height,
                     time,
+                    delta_time,
                     num_agents: buffers.num_agents,
+                    agent_stats: [AgentStats {
+                        velocity: 0.1,
+                    }],
                 };
 
                 // Graphics
