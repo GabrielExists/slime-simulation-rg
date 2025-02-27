@@ -1,3 +1,4 @@
+use wgpu::{BindGroupLayout, COPY_BUFFER_ALIGNMENT, Device};
 use shared::ShaderConstants;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -5,6 +6,17 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+
+struct Buffers {
+    pub width: u32,
+    pub height: u32,
+    pub num_pixels: u32,
+    pub storage_buffer: wgpu::Buffer,
+    pub trail_buffer: wgpu::Buffer,
+    pub pixel_input_buffer: wgpu::Buffer,
+    pub compute_bind_group: wgpu::BindGroup,
+    pub render_bind_group: wgpu::BindGroup,
+}
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -115,14 +127,6 @@ async fn run_inner(
 
     let start = std::time::Instant::now();
 
-    let width = window.inner_size().width;
-    let height = window.inner_size().height;
-    let num_pixels = width * height;
-
-    let empty_bytes = std::iter::repeat(0)
-        .take(num_pixels as usize)
-        .flat_map(u32::to_ne_bytes)
-        .collect::<Vec<_>>();
 
     // Compute
     // let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -132,54 +136,8 @@ async fn run_inner(
     //     usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
     //     mapped_at_creation: false,
     // });
-    let pixel_input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Pixel input buffer"),
-        contents: &empty_bytes,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
 
-    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Generic storage buffer"),
-        contents: &empty_bytes,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
-    let trail_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Trail buffer"),
-        contents: &empty_bytes,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
-
-    let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("compute bind group"),
-        layout: &compute_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: storage_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: trail_buffer.as_entire_binding(),
-            },
-        ],
-    });
-
-    let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("render bind group"),
-        layout: &render_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: pixel_input_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    let mut buffers = get_buffers(&device, &compute_bind_group_layout, &render_bind_group_layout, window.inner_size());
 
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
@@ -196,17 +154,7 @@ async fn run_inner(
             Event::Resumed => {
                 // Avoid holding onto to multiple surfaces at the same time
                 // (as it's undetected and can confusingly break e.g. Wayland).
-                //
-                // FIXME(eddyb) create the window and `wgpu::Surface` on either
-                // `Event::NewEvents(StartCause::Init)`, or `Event::Resumed`,
-                // which is becoming recommended on (almost) all platforms, see:
-                // - https://github.com/rust-windowing/winit/releases/tag/v0.30.0
-                // - https://github.com/gfx-rs/wgpu/blob/v23/examples/src/framework.rs#L139-L161
-                //   (note wasm being handled differently due to its `<canvas>`)
                 if let Ok((_, surface_config)) = &surface_with_config {
-                    // HACK(eddyb) can't move out of `surface_with_config` as
-                    // it's a closure capture, and also the `Err(_)` variant
-                    // has a payload so that needs to be filled with something.
                     let filler = Err(SurfaceCreationPending {
                         preferred_format: surface_config.format,
                     });
@@ -239,6 +187,7 @@ async fn run_inner(
                         surface_config.width = size.width;
                         surface_config.height = size.height;
                         surface.configure(&device, surface_config);
+                        buffers = get_buffers(&device, &compute_bind_group_layout, &render_bind_group_layout, size);
                     }
                 }
             }
@@ -248,8 +197,8 @@ async fn run_inner(
             } => {
                 let time = start.elapsed().as_secs_f32();
                 let push_constants = ShaderConstants {
-                    width: window.inner_size().width,
-                    height: window.inner_size().height,
+                    width: buffers.width,
+                    height: buffers.height,
                     time,
                 };
 
@@ -262,22 +211,21 @@ async fn run_inner(
 
                 {
                     let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
-                    cpass.set_bind_group(0, &compute_bind_group, &[]);
+                    cpass.set_bind_group(0, &buffers.compute_bind_group, &[]);
                     cpass.set_pipeline(&compute_pipeline);
                     cpass.set_push_constants(
                         0,
                         bytemuck::bytes_of(&push_constants),
                     );
-                    cpass.dispatch_workgroups(width.div_ceil(16) as u32, height.div_ceil(16), 1);
+                    cpass.dispatch_workgroups(buffers.width, buffers.height, 1);
                 }
 
                 compute_encoder.copy_buffer_to_buffer(
-                    &storage_buffer,
+                    &buffers.trail_buffer,
                     0,
-                    &pixel_input_buffer,
+                    &buffers.pixel_input_buffer,
                     0,
-                    num_pixels as wgpu::BufferAddress,
-
+                    buffers.num_pixels as wgpu::BufferAddress,
                 );
                 queue.submit([compute_encoder.finish()]);
 
@@ -320,7 +268,7 @@ async fn run_inner(
                         });
 
                         rpass.set_pipeline(render_pipeline);
-                        rpass.set_bind_group(0, &render_bind_group, &[]);
+                        rpass.set_bind_group(0, &buffers.render_bind_group, &[]);
                         rpass.set_push_constants(
                             wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                             0,
@@ -378,6 +326,80 @@ async fn run_inner(
             _ => {}
         }
     }).unwrap();
+}
+
+fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, render_bind_group_layout: &BindGroupLayout, size: winit::dpi::PhysicalSize<u32>) -> Buffers {
+    let alignment = COPY_BUFFER_ALIGNMENT as u32;
+    let width = size.width;
+    let height = size.height * 4;
+    println!("Width and height {}, {}", width, height);
+    let num_pixels = width * height;
+    let num_pixels= num_pixels.div_ceil(alignment) * alignment;
+
+    let empty_bytes = std::iter::repeat(0 as u32)
+        .take(num_pixels as usize / 4 as usize)
+        .flat_map(u32::to_ne_bytes)
+        .collect::<Vec<_>>();
+
+    let mut storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Generic storage buffer"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+    });
+    let mut trail_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Trail buffer"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+    });
+
+    let mut pixel_input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Pixel input buffer"),
+        contents: &empty_bytes,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_DST
+            | wgpu::BufferUsages::COPY_SRC,
+    });
+
+    let mut compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("compute bind group"),
+        layout: &compute_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: storage_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: trail_buffer.as_entire_binding(),
+            },
+        ],
+    });
+
+    let mut render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("render bind group"),
+        layout: &render_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: pixel_input_buffer.as_entire_binding(),
+            },
+        ],
+    });
+    let buffers = Buffers {
+        width,
+        height,
+        num_pixels,
+        storage_buffer,
+        trail_buffer,
+        pixel_input_buffer,
+        compute_bind_group,
+        render_bind_group,
+    };
+    buffers
 }
 
 fn create_pipeline(

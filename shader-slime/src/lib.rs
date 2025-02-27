@@ -20,6 +20,46 @@ fn hash(mut state: u32) -> u32 {
     state
 }
 
+// LocalSize/numthreads of (x = 64, y = 1, z = 1)
+#[spirv(compute(threads(2, 2)))]
+pub fn main_cs(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(push_constant)] constants: &ShaderConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] screen_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
+) {
+    if id.x >= constants.width || id.y >= constants.height {
+        return;
+    }
+    let index = id.y as usize * constants.width as usize + id.x as usize;
+    let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
+    // screen_buffer[index] = hashed;
+    // let scaled = hashed as f32 / u8::MAX as f32;
+    trail_buffer[index] = hashed;
+    // texture[index] = hashed;
+    // unsafe {
+    //     texture.write(uvec2(id.x, id.y), vec4(scaled, scaled, scaled, 1.0));
+    // }
+}
+
+#[spirv(fragment)]
+pub fn main_fs(
+    #[spirv(frag_coord)] in_frag_coord: Vec4,
+    #[spirv(push_constant)] constants: &ShaderConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
+    output: &mut Vec4,
+
+    // NOTE(eddyb) this acts like an integration test for specialization constants.
+    #[spirv(spec_constant(id = 0x5007, default = 100))] sun_intensity_extra_spec_const_factor: u32,
+) {
+    // let frag_coord = vec2(in_frag_coord.x, in_frag_coord.y);
+    // *output = fs(constants, frag_coord, sun_intensity_extra_spec_const_factor);
+    let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
+    let pixel = trail_buffer[index];
+    let normalized_pixel = pixel as f32 / u32::MAX as f32;
+    *output = vec4(normalized_pixel, normalized_pixel, normalized_pixel, 1.0);
+}
+
 // Adapted from the wgpu hello-compute example
 
 pub fn collatz(mut n: u32) -> Option<u32> {
@@ -43,27 +83,6 @@ pub fn collatz(mut n: u32) -> Option<u32> {
     Some(i)
 }
 
-// LocalSize/numthreads of (x = 64, y = 1, z = 1)
-#[spirv(compute(threads(16, 16)))]
-pub fn main_cs(
-    #[spirv(global_invocation_id)] id: UVec3,
-    #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] screen_buffer: &mut [u32],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
-) {
-    if id.x >= constants.width || id.y >= constants.height {
-        return;
-    }
-    let index = id.y as usize * constants.width as usize + id.x as usize;
-    let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
-    screen_buffer[index] = hashed;
-    let scaled = hashed as f32 / u32::MAX as f32;
-    trail_buffer[index] = hashed;
-    // texture[index] = hashed;
-    // unsafe {
-    //     texture.write(uvec2(id.x, id.y), vec4(scaled, scaled, scaled, 1.0));
-    // }
-}
 
 const DEPOLARIZATION_FACTOR: f32 = 0.035;
 const MIE_COEFFICIENT: f32 = 0.005;
@@ -207,24 +226,6 @@ pub fn fs(
     let color = color.max(Vec3::splat(0.0)).min(Vec3::splat(1024.0));
 
     tonemap(color).extend(1.0)
-}
-
-#[spirv(fragment)]
-pub fn main_fs(
-    #[spirv(frag_coord)] in_frag_coord: Vec4,
-    #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
-    output: &mut Vec4,
-
-    // NOTE(eddyb) this acts like an integration test for specialization constants.
-    #[spirv(spec_constant(id = 0x5007, default = 100))] sun_intensity_extra_spec_const_factor: u32,
-) {
-    // let frag_coord = vec2(in_frag_coord.x, in_frag_coord.y);
-    let index = in_frag_coord.x as usize * constants.width as usize + in_frag_coord.y as usize;
-    let pixel = trail_buffer[index];
-    let normalized_pixel = pixel as f32 / u32::MAX as f32;
-    *output = vec4(normalized_pixel, normalized_pixel, normalized_pixel, 1.0);
-    // *output = fs(constants, frag_coord, sun_intensity_extra_spec_const_factor);
 }
 
 #[spirv(vertex)]
