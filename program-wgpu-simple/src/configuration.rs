@@ -1,6 +1,6 @@
 use shared::AgentStats;
 
-pub const NUM_AGENTS: u32 = 256;
+pub const NUM_AGENTS: u32 = 10000;
 pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     // Pixels travelled per second
     velocity: 50.0,
