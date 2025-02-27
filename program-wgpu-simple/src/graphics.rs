@@ -10,7 +10,8 @@ use winit::{
 struct Buffers {
     pub width: u32,
     pub height: u32,
-    pub num_pixels: u32,
+    pub num_bytes: usize,
+    #[allow(dead_code)]
     pub storage_buffer: wgpu::Buffer,
     pub trail_buffer: wgpu::Buffer,
     pub pixel_input_buffer: wgpu::Buffer,
@@ -217,7 +218,7 @@ async fn run_inner(
                         0,
                         bytemuck::bytes_of(&push_constants),
                     );
-                    cpass.dispatch_workgroups(buffers.width, buffers.height, 1);
+                    cpass.dispatch_workgroups(buffers.width.div_ceil(16), buffers.height.div_ceil(16), 1);
                 }
 
                 compute_encoder.copy_buffer_to_buffer(
@@ -225,7 +226,7 @@ async fn run_inner(
                     0,
                     &buffers.pixel_input_buffer,
                     0,
-                    buffers.num_pixels as wgpu::BufferAddress,
+                    (buffers.num_bytes) as wgpu::BufferAddress,
                 );
                 queue.submit([compute_encoder.finish()]);
 
@@ -331,24 +332,24 @@ async fn run_inner(
 fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, render_bind_group_layout: &BindGroupLayout, size: winit::dpi::PhysicalSize<u32>) -> Buffers {
     let alignment = COPY_BUFFER_ALIGNMENT as u32;
     let width = size.width;
-    let height = size.height * 4;
+    let height = size.height;
     println!("Width and height {}, {}", width, height);
-    let num_pixels = width * height;
-    let num_pixels= num_pixels.div_ceil(alignment) * alignment;
+    let num_pixels = ((width * height).div_ceil(alignment) * alignment) as usize;
 
     let empty_bytes = std::iter::repeat(0 as u32)
-        .take(num_pixels as usize / 4 as usize)
+        .take(num_pixels)
         .flat_map(u32::to_ne_bytes)
         .collect::<Vec<_>>();
+    let num_bytes = empty_bytes.len();
 
-    let mut storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Generic storage buffer"),
         contents: &empty_bytes,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
     });
-    let mut trail_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let trail_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Trail buffer"),
         contents: &empty_bytes,
         usage: wgpu::BufferUsages::STORAGE
@@ -356,7 +357,7 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
             | wgpu::BufferUsages::COPY_SRC,
     });
 
-    let mut pixel_input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let pixel_input_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Pixel input buffer"),
         contents: &empty_bytes,
         usage: wgpu::BufferUsages::STORAGE
@@ -364,7 +365,7 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
             | wgpu::BufferUsages::COPY_SRC,
     });
 
-    let mut compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("compute bind group"),
         layout: &compute_bind_group_layout,
         entries: &[
@@ -379,7 +380,7 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
         ],
     });
 
-    let mut render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("render bind group"),
         layout: &render_bind_group_layout,
         entries: &[
@@ -392,7 +393,7 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
     let buffers = Buffers {
         width,
         height,
-        num_pixels,
+        num_bytes,
         storage_buffer,
         trail_buffer,
         pixel_input_buffer,
