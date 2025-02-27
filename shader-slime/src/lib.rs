@@ -21,29 +21,28 @@ fn hash(mut state: u32) -> u32 {
 }
 
 // LocalSize/numthreads of (x = 64, y = 1, z = 1)
-#[spirv(compute(threads(16, 16)))]
+#[spirv(compute(threads(16)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] screen_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] agents_buffer: &mut [Agent],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
 ) {
-    let index = id.y as usize * constants.width as usize + id.x as usize;
-    if id.x >= constants.width || id.y >= constants.height {
-        return;
+    let agent_index = id.x as usize;
+    let agent = &mut agents_buffer[agent_index];
+    if agent.x < constants.width as f32 && agent.y < constants.height as f32 {
+        let pixel_index = agent.y as usize * constants.width as usize + agent.x as usize;
+        trail_buffer[pixel_index] = 0xFFFFFFFF
     }
-    // let index = id.x as usize * constants.height as usize + id.y as usize;
-    let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
-    // screen_buffer[index] = hashed;
-    // let scaled = hashed as f32 / u8::MAX as f32;
-    if id.y as usize == id.x as usize {
-        trail_buffer[index] = 0xFFFFFFFF;
-    } else {
-        trail_buffer[index] = hashed;
-    }
-    // texture[index] = hashed;
-    // unsafe {
-    //     texture.write(uvec2(id.x, id.y), vec4(scaled, scaled, scaled, 1.0));
+    // let index = id.y as usize * constants.width as usize + id.x as usize;
+    // if id.x >= constants.width || id.y >= constants.height {
+    //     return;
+    // }
+    // let hashed = hash(index as u32 * (constants.time * 1000.0) as u32);
+    // if id.y as usize == id.x as usize {
+    //     trail_buffer[index] = 0xFFFFFFFF;
+    // } else {
+    //     trail_buffer[index] = hashed;
     // }
 }
 

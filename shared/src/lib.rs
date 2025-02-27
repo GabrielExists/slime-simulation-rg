@@ -20,6 +20,15 @@ pub struct ShaderConstants {
     pub width: u32,
     pub height: u32,
     pub time: f32,
+    pub num_agents: u32,
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct Agent {
+    pub x: f32,
+    pub y: f32,
+    pub angle: f32,
 }
 
 pub fn saturate(x: f32) -> f32 {

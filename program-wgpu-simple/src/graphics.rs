@@ -1,3 +1,4 @@
+use rand::Rng;
 use wgpu::{BindGroupLayout, COPY_BUFFER_ALIGNMENT, Device};
 use shared::ShaderConstants;
 use wgpu::util::DeviceExt;
@@ -10,11 +11,14 @@ use winit::{
 struct Buffers {
     pub width: u32,
     pub height: u32,
-    pub num_bytes: usize,
-    #[allow(dead_code)]
-    pub storage_buffer: wgpu::Buffer,
+
+    pub num_agents: u32,
+    pub agents_buffer: wgpu::Buffer,
+
+    pub num_bytes_screen_buffers: usize,
     pub trail_buffer: wgpu::Buffer,
     pub pixel_input_buffer: wgpu::Buffer,
+
     pub compute_bind_group: wgpu::BindGroup,
     pub render_bind_group: wgpu::BindGroup,
 }
@@ -201,6 +205,7 @@ async fn run_inner(
                     width: buffers.width,
                     height: buffers.height,
                     time,
+                    num_agents: buffers.num_agents,
                 };
 
                 // Graphics
@@ -218,7 +223,7 @@ async fn run_inner(
                         0,
                         bytemuck::bytes_of(&push_constants),
                     );
-                    cpass.dispatch_workgroups(buffers.width.div_ceil(16), buffers.height.div_ceil(16), 1);
+                    cpass.dispatch_workgroups(buffers.num_agents.div_ceil(16), 1, 1);
                 }
 
                 compute_encoder.copy_buffer_to_buffer(
@@ -226,7 +231,7 @@ async fn run_inner(
                     0,
                     &buffers.pixel_input_buffer,
                     0,
-                    (buffers.num_bytes) as wgpu::BufferAddress,
+                    (buffers.num_bytes_screen_buffers) as wgpu::BufferAddress,
                 );
                 queue.submit([compute_encoder.finish()]);
 
@@ -342,9 +347,22 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
         .collect::<Vec<_>>();
     let num_bytes = empty_bytes.len();
 
-    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Generic storage buffer"),
-        contents: &empty_bytes,
+    let num_agents = 256;
+    let agent_bytes = std::iter::repeat(())
+        .take(num_agents)
+        .flat_map(|()| {
+            let agent = shared::Agent {
+                x: rand::rng().random_range(0..width) as f32,
+                y: rand::rng().random_range(0..height) as f32,
+                angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
+            };
+            bytemuck::bytes_of(&agent).to_vec()
+        })
+        .collect::<Vec<_>>();
+
+    let agents_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Agent buffer"),
+        contents: &agent_bytes,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
@@ -371,7 +389,7 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: storage_buffer.as_entire_binding(),
+                resource: agents_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 1,
@@ -393,8 +411,9 @@ fn get_buffers(device: &Device, compute_bind_group_layout: &BindGroupLayout, ren
     let buffers = Buffers {
         width,
         height,
-        num_bytes,
-        storage_buffer,
+        num_agents: num_agents as u32,
+        agents_buffer,
+        num_bytes_screen_buffers: num_bytes,
         trail_buffer,
         pixel_input_buffer,
         compute_bind_group,
