@@ -1,4 +1,6 @@
-use spirv_builder::{MetadataPrintout, SpirvBuilder};
+extern crate spirv_builder;
+
+use spirv_builder::{Capability, MetadataPrintout, SpirvBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -9,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<std::path::PathBuf>();
 
         SpirvBuilder::new(crate_path, "spirv-unknown-vulkan1.1")
+            .capability(Capability::StorageImageWriteWithoutFormat)
             .print_metadata(MetadataPrintout::Full)
             .build()?;
     }

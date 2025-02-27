@@ -1,11 +1,14 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
-// HACK(eddyb) can't easily see warnings otherwise from `spirv-builder` builds.
-#![deny(warnings)]
 
 use core::f32::consts::PI;
-use glam::{Vec2, Vec3, Vec4, vec2, vec3, UVec3};
+use glam::{Vec2, Vec3, Vec4, vec2, vec3, UVec3, vec4, uvec2};
 use shared::*;
 use spirv_std::{glam, spirv};
+// Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
+// we tie #[no_std] above to the same condition, so it's fine.
+#[cfg(target_arch = "spirv")]
+use spirv_std::num_traits::Float;
+
 
 fn hash(mut state: u32) -> u32 {
     state ^= 2747636419u32;
@@ -46,18 +49,21 @@ pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] screen_buffer: &mut [u32],
+    #[spirv(descriptor_set = 0, binding = 1)] texture: &spirv_std::image::StorageImage2d,
 ) {
     if id.x >= constants.width || id.y >= constants.height {
         return;
     }
     let index = id.y as usize * constants.width as usize + id.x as usize;
-    screen_buffer[index] = hash(index as u32 * constants.time as u32);
+    let hashed = hash(index as u32 * constants.time as u32);
+    screen_buffer[index] = hashed;
+    let scaled = hashed as f32 / u32::MAX as f32;
+    // texture[index] = vec4(scaled, scaled, scaled, 1.0);
+    // texture[index] = hashed;
+    unsafe {
+        texture.write(uvec2(id.x, id.y), vec4(scaled, scaled, scaled, 1.0));
+    }
 }
-
-// Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
-// we tie #[no_std] above to the same condition, so it's fine.
-#[cfg(target_arch = "spirv")]
-use spirv_std::num_traits::Float;
 
 const DEPOLARIZATION_FACTOR: f32 = 0.035;
 const MIE_COEFFICIENT: f32 = 0.005;
