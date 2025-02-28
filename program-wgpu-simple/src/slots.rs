@@ -88,9 +88,12 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
     let time = start.elapsed().as_secs_f32();
     let mut delta_time = last_time.elapsed().as_secs_f32();
     // If we're slow enough, instead slow down the simulation
-    if delta_time < 1.0 / 50.0 {
+    if delta_time > 1.0 / 50.0 {
         delta_time = 1.0 / 50.0;
     }
+    // if time > 3.0 {
+    //     delta_time = 0.0;
+    // }
     *last_time = std::time::Instant::now();
     let push_constants = ShaderConstants {
         width: program_buffers.width,

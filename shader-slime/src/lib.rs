@@ -34,12 +34,13 @@ pub fn main_cs(
     let weight_right = sense(trail_buffer, constants, agent, &agent_stats, -agent_stats.sensor_angle_spacing);
 
     let random_steer_strength = random as f32 / u32::MAX as f32;
+
     // If center is stronger than edges, continue forward
     if weight_forward > weight_left && weight_forward > weight_right {
         agent.angle += 0.0;
     }
     // If edges are stronger than center, pick a direction randomly
-    else if weight_forward > weight_left && weight_forward > weight_right {
+    else if weight_left > weight_forward && weight_right > weight_forward {
         agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
     }
     // If there's a gradient in one direction, turn that way
@@ -47,8 +48,13 @@ pub fn main_cs(
         agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
     }
     else if weight_left > weight_right {
-        agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+        agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
     }
+    // if weight_forward < 0.4 {
+    //     agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time / 2.0;
+    // } else {
+    //     agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+    // }
 
     // Render each pixel inbetween here and the end of the streak we move this frame
     let mut num_steps = agent_stats.velocity * constants.delta_time;
@@ -99,7 +105,7 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
             let pos_y = sensor_center_y + offset_y as f32;
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
-                let index = pos_x as usize * constants.width as usize + pos_y as usize;
+                let index = pos_y as usize * constants.width as usize + pos_x as usize;
                 sum += trail_buffer[index] as f32 / u32::MAX as f32;
             }
         }

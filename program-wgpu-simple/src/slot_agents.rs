@@ -1,3 +1,4 @@
+use configuration::{SPAWN_MODE, SpawnMode};
 use rand::Rng;
 use shared::ShaderConstants;
 use crate::slots::*;
@@ -27,11 +28,7 @@ impl Slot for SlotAgents {
         let agent_bytes = std::iter::repeat(())
             .take(configuration::NUM_AGENTS as usize)
             .flat_map(|()| {
-                let agent = shared::Agent {
-                    x: 100.0,//program_buffers.width as f32 / 2.0,
-                    y: 100.0,// program_buffers.height as f32 / 2.0,
-                    angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
-                };
+                let agent = spawn_agent(program_buffers, &SPAWN_MODE);
                 bytemuck::bytes_of(&agent).to_vec()
             })
             .collect::<Vec<_>>();
@@ -150,4 +147,50 @@ impl Slot for SlotAgents {
         );
         program_init.queue.submit([compute_encoder.finish()]);
     }
+}
+
+fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shared::Agent {
+    match spawn_mode {
+        SpawnMode::CenterFacingOutwards => {
+            shared::Agent {
+                x: program_buffers.width as f32 / 2.0,
+                y: program_buffers.height as f32 / 2.0,
+                angle: get_random_angle(),
+            }
+        }
+        SpawnMode::PointFacingOutwards { x, y } => {
+            shared::Agent {
+                x: *x,
+                y: *y,
+                angle: get_random_angle(),
+            }
+        }
+        SpawnMode::CircleFacingInwards { max_distance } => {
+            let center_x = program_buffers.width as f32 / 2.0;
+            let center_y = program_buffers.height as f32 / 2.0;
+            let max_number = 1000;
+            let random_angle = get_random_angle();
+            let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
+            let random_distance = random_fraction * *max_distance;
+            shared::Agent {
+                x: center_x + random_angle.cos() * random_distance,
+                y: center_y + random_angle.sin() * random_distance,
+                angle: std::f32::consts::PI + random_angle,
+            }
+        }
+        SpawnMode::EvenlyDistributed => {
+            shared::Agent {
+                x: rand::rng().random_range(0..program_buffers.width * 10) as f32 / 10.0,
+                y: rand::rng().random_range(0..program_buffers.height * 10) as f32 / 10.0,
+                angle: get_random_angle(),
+            }
+        }
+    }
+}
+
+fn get_random_angle() -> f32 {
+    let max_number = 1000;
+    let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
+    let random_angle = random_fraction * (std::f32::consts::PI * 2.0);
+    random_angle
 }

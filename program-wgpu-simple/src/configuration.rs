@@ -1,12 +1,29 @@
+use std::f32::consts::PI;
 use shared::AgentStats;
 
+#[allow(dead_code)]
+pub enum SpawnMode {
+    EvenlyDistributed,
+    CenterFacingOutwards,
+    PointFacingOutwards {
+        x: f32,
+        y: f32,
+    },
+    CircleFacingInwards {
+        max_distance: f32,
+    },
+
+}
+pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
+    max_distance: 400.0,
+};
 pub const NUM_AGENTS: u32 = 10000;
 pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     // Pixels travelled per second
     velocity: 50.0,
-    turn_speed: 1.0,
-    sensor_angle_spacing: 60.0,
-    sensor_offset: 5.0,
+    turn_speed: PI * 3.0,
+    sensor_angle_spacing: PI / 6.0,
+    sensor_offset: 3.0,
 }];
 // Percent of full white to black transition per second.
 // 100.0 is completely faded after 1 second.
@@ -17,4 +34,4 @@ pub const EVAPORATION_SPEED: f32 = 20.0;
 // Reaching 90% takes 1 second if set to 240%.
 // Reaching 86% takes 1 second if set to 200%.
 // Reaching 63% takes 1 second if set to 100%.
-pub const DIFFUSION_SPEED: f32 = 50.0;
+pub const DIFFUSION_SPEED: f32 = 200.0;
