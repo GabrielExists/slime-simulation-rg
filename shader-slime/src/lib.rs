@@ -178,17 +178,10 @@ pub fn main_fs(
         *output = vec4(1.0, 1.0, 1.0, 1.0);
         return;
     }
-    // let frag_coord = vec2(in_frag_coord.x, in_frag_coord.y);
-    // *output = fs(constants, frag_coord, sun_intensity_extra_spec_const_factor);
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
-    // let pixel_r = pixel_fraction_from_int(trail_buffer[index]);
-    // let pixel_g = pixel_fraction_from_int(trail_buffer[index]);
-    // let pixel_b = pixel_fraction_from_int(trail_buffer[index]);
-    // *output = vec4(pixel_r, pixel_g, pixel_b, 1.0);
-    let pixel = trail_buffer[index];
-    let normalized_pixel = pixel as f32 / u32::MAX as f32;
-    *output = vec4(normalized_pixel, normalized_pixel, normalized_pixel, 1.0);
 
+    let pixel = pixel_view(&mut trail_buffer[index]);
+    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
 }
 
 #[spirv(vertex)]
@@ -221,4 +214,10 @@ fn pixel_fraction_from_int(value: u32) -> f32 {
 }
 fn pixel_int_from_fraction(value: f32) -> u32 {
     (value * PIXEL_MAX as f32) as u32
+}
+fn pixel_fraction_from_u8(value: u32) -> f32 {
+    value as f32 / 255 as f32
+}
+fn pixel_u8_from_fraction(value: f32) -> u32 {
+    (value * 255 as f32) as u32
 }

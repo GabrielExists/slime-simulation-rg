@@ -76,3 +76,43 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     // Evaluate polynomial
     x * x * (3.0 - 2.0 * x)
 }
+
+// fn vec_from_u32(storage: &mut u32) -> &mut UVec2 {
+//     from_bytes_mut::<UVec2>(bytemuck::bytes_of_mut(storage))
+// }
+
+pub struct PixelView<'storage> {
+    storage: &'storage mut u32,
+}
+
+pub fn pixel_view(storage: &mut u32) -> PixelView {
+    PixelView::new(storage)
+}
+
+impl<'storage> PixelView<'storage> {
+    pub fn new(storage: &'storage mut u32) -> Self {
+        PixelView {
+            storage,
+        }
+    }
+    pub fn x(&self) -> u32 { *self.storage >> 24 }
+    pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
+    pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
+    pub fn w(&self) -> u32 { *self.storage & 0xFF }
+    pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
+    pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
+    pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
+    pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
+    pub fn set_x(&mut self, value: u32) {
+        *self.storage = *self.storage & 0x00FFFFFF | value << 24;
+    }
+    pub fn set_y(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
+    }
+    pub fn set_z(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
+    }
+    pub fn set_w(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+    }
+}
