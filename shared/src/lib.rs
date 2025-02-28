@@ -38,6 +38,7 @@ pub struct AgentStats {
     pub turn_speed: f32,
     pub sensor_angle_spacing: f32,
     pub sensor_offset: f32,
+    pub pixel_addition: u32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]

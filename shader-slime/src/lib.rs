@@ -65,7 +65,7 @@ pub fn main_cs(
         while num_steps > step {
             step_x = step_x + agent.angle.cos() * step;
             step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, constants, &vec2(step_x, step_y));
+            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y));
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -76,7 +76,7 @@ pub fn main_cs(
         // Do the last little leap
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
-        let bounds = set_pixel(trail_buffer, constants, &vec2(step_x, step_y));
+        let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y));
         if let Bounds::OutsideBounds = bounds {
             break 'clamp_block bounds;
         }
@@ -114,10 +114,12 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 }
 
 
-fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, position: &Vec2) -> Bounds {
+fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: &Vec2) -> Bounds {
     if is_inside_bounds(position, constants) {
         let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
-        trail_buffer[pixel_index] = 0xFFFFFFFF;
+        let mut value = trail_buffer[pixel_index] as f32;
+        value += agent_stats.pixel_addition as f32;
+        trail_buffer[pixel_index] = f32::min(value, u32::MAX as f32) as u32;
         Bounds::InsideBounds
     } else {
         Bounds::OutsideBounds
