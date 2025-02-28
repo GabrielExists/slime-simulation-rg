@@ -20,7 +20,7 @@ pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
 pub const NUM_AGENTS: u32 = 1000000;
 pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     // Pixels travelled per second
-    velocity: 50.0,
+    velocity: 80.0,
     turn_speed: PI * 8.0,
     sensor_angle_spacing: PI / 3.0,
     sensor_offset: 5.0,
