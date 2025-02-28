@@ -121,7 +121,7 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
             }
         }
     }
-    if sum > 6.0 {
+    if sum > agent_stats.avoidance_threshold {
         None
     } else {
         Some(sum)

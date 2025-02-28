@@ -14,51 +14,48 @@ pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
 pub const NUM_AGENT_TYPES: usize = 3;
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170.0 },
-        num_agents: 10000,
-        shader_stats: AgentStats {
-            // Pixels travelled per second
-            velocity: 65.0,
-            turn_speed: PI * 30.0,
-            turn_speed_avoidance: PI * 30.0,
-            sensor_angle_spacing: PI / 3.0,
-            sensor_offset: 5.0,
-            pixel_addition: 1.0 / 10.0,
-            avoidance_threshold: 3.0,
-            evaporation_speed: 50.0,
-            diffusion_speed: 50.0,
-        },
-    },
-    AgentStatsAll {
         spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 170.0 },
         num_agents: 10000,
         shader_stats: AgentStats {
-            // Pixels travelled per second
             velocity: 65.0,
-            turn_speed: PI * 30.0,
+            turn_speed: PI * 80.0,
             turn_speed_avoidance: PI * 30.0,
             sensor_angle_spacing: PI / 3.0,
             sensor_offset: 5.0,
-            pixel_addition: 1.0 / 10.0,
-            avoidance_threshold: 3.0,
+            pixel_addition: 1.0 / 5.0,
+            avoidance_threshold: 10.0,
             evaporation_speed: 50.0,
-            diffusion_speed: 50.0,
+            diffusion_speed: 180.0,
+        },
+    },
+    AgentStatsAll {
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170.0 },
+        num_agents: 10000,
+        shader_stats: AgentStats {
+            velocity: 65.0,
+            turn_speed: PI * 80.0,
+            turn_speed_avoidance: PI * 30.0,
+            sensor_angle_spacing: PI / 3.0,
+            sensor_offset: 5.0,
+            pixel_addition: 1.0 / 5.0,
+            avoidance_threshold: 10.0,
+            evaporation_speed: 50.0,
+            diffusion_speed: 180.0,
         },
     },
     AgentStatsAll {
         spawn_mode: SpawnMode::CircleFacingInwards { max_distance: 170.0 },
         num_agents: 10000,
         shader_stats: AgentStats {
-            // Pixels travelled per second
             velocity: 65.0,
-            turn_speed: PI * 30.0,
+            turn_speed: PI * 80.0,
             turn_speed_avoidance: PI * 30.0,
             sensor_angle_spacing: PI / 3.0,
             sensor_offset: 5.0,
-            pixel_addition: 1.0 / 10.0,
+            pixel_addition: 1.0 / 5.0,
             avoidance_threshold: 10.0,
             evaporation_speed: 50.0,
-            diffusion_speed: 50.0,
+            diffusion_speed: 180.0,
         },
     },
 ];
