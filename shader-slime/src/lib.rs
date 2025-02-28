@@ -106,7 +106,7 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += trail_buffer[index] as f32 / u32::MAX as f32;
+                sum += pixel_fraction_from_int(trail_buffer[index]);
             }
         }
     }
@@ -119,7 +119,7 @@ fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats:
         let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
         let mut value = trail_buffer[pixel_index] as f32;
         value += agent_stats.pixel_addition as f32;
-        trail_buffer[pixel_index] = f32::min(value, u32::MAX as f32) as u32;
+        trail_buffer[pixel_index] = f32::min(value, PIXEL_MAX as f32) as u32;
         Bounds::InsideBounds
     } else {
         Bounds::OutsideBounds
@@ -138,7 +138,6 @@ pub fn diffuse_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
 ) {
     let index = id.y as usize * constants.width as usize + id.x as usize;
-    let original = trail_buffer[index];
 
     let mut sum = 0.0;
     for offset_x in -1..=1 {
@@ -147,23 +146,25 @@ pub fn diffuse_cs(
             let sample_y = id.y as i32 + offset_y;
             if sample_x >= 0 && sample_x < constants.width as i32 && sample_y >= 0 && sample_y < constants.height as i32 {
                 let sample_index: usize = sample_y as usize * constants.width as usize + sample_x as usize;
-                sum += trail_buffer[sample_index] as f32 / u32::MAX as f32;
+                sum += pixel_fraction_from_int(trail_buffer[sample_index]);
             }
         }
     }
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
-        original as f32 / u32::MAX as f32,
+        pixel_fraction_from_int(trail_buffer[index]),
         blur_result,
         (constants.diffuse_speed / 100.0) * constants.delta_time
     );
-    let diffused_upscaled = diffused_value * u32::MAX as f32;
-    // trail_buffer[index] = (diffused_value * u32::MAX as f32) as u32;
+    // let diffused_upscaled = pixel_int_from_fraction(diffused_value) as f32;
+    // // trail_buffer[index] = (diffused_value * u32::MAX as f32) as u32;
+    // let evaporation_this_tick = (constants.evaporate_speed * u32::MAX as f32 / 100.0) * constants.delta_time;
+    // let new_value = f32::max(0.0, diffused_upscaled - evaporation_this_tick) as u32;
+    // trail_buffer[index] = new_value;
 
-
-    let evaporation_this_tick = (constants.evaporate_speed * u32::MAX as f32 / 100.0) * constants.delta_time;
-    let new_value = f32::max(0.0, diffused_upscaled - evaporation_this_tick) as u32;
-    trail_buffer[index] = new_value;
+    let evaporation_this_tick = (constants.evaporate_speed / 100.0) * constants.delta_time;
+    let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
+    trail_buffer[index] = pixel_int_from_fraction(new_value);
 }
 
 #[spirv(fragment)]
@@ -180,9 +181,14 @@ pub fn main_fs(
     // let frag_coord = vec2(in_frag_coord.x, in_frag_coord.y);
     // *output = fs(constants, frag_coord, sun_intensity_extra_spec_const_factor);
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
+    // let pixel_r = pixel_fraction_from_int(trail_buffer[index]);
+    // let pixel_g = pixel_fraction_from_int(trail_buffer[index]);
+    // let pixel_b = pixel_fraction_from_int(trail_buffer[index]);
+    // *output = vec4(pixel_r, pixel_g, pixel_b, 1.0);
     let pixel = trail_buffer[index];
     let normalized_pixel = pixel as f32 / u32::MAX as f32;
     *output = vec4(normalized_pixel, normalized_pixel, normalized_pixel, 1.0);
+
 }
 
 #[spirv(vertex)]
@@ -209,3 +215,10 @@ fn hash(mut state: u32) -> u32 {
     state
 }
 
+const PIXEL_MAX: u32 = u32::MAX;
+fn pixel_fraction_from_int(value: u32) -> f32 {
+    value as f32 / PIXEL_MAX as f32
+}
+fn pixel_int_from_fraction(value: f32) -> u32 {
+    (value * PIXEL_MAX as f32) as u32
+}
