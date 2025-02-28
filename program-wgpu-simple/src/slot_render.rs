@@ -11,12 +11,12 @@ pub struct SlotRender {
 }
 
 pub struct SlotRenderInit {
-    pub render_pipeline: wgpu::RenderPipeline,
-    pub render_bind_group_layout: wgpu::BindGroupLayout,
+    pub pipeline: wgpu::RenderPipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
 }
 
 pub struct SlotRenderBuffers {
-    pub render_bind_group: wgpu::BindGroup,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl Slot for SlotRender {
@@ -25,7 +25,7 @@ impl Slot for SlotRender {
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
         // Graphics
-        let render_bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -41,19 +41,19 @@ impl Slot for SlotRender {
             ],
         });
         // Merged
-        let render_pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render pipeline layout"),
-            bind_group_layouts: &[&render_bind_group_layout],
+            bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[wgpu::PushConstantRange {
                 stages: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                 range: 0..std::mem::size_of::<ShaderConstants>() as u32,
             }],
         });
         // Graphics
-        let render_pipeline = program_init.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let pipeline = program_init.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             cache: None,
             label: Some("Render pipeline"),
-            layout: Some(&render_pipeline_layout),
+            layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &program_init.module,
                 entry_point: Some(VS_ENTRY_POINT),
@@ -88,8 +88,8 @@ impl Slot for SlotRender {
             multiview: None,
         });
         let init = SlotRenderInit {
-            render_pipeline,
-            render_bind_group_layout,
+            pipeline,
+            bind_group_layout,
         };
         let window_data = Self::create_buffers(&program_init, program_buffers, &init);
         Self {
@@ -99,9 +99,9 @@ impl Slot for SlotRender {
     }
 
     fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
-        let render_bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("render bind group"),
-            layout: &init.render_bind_group_layout,
+            layout: &init.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -109,8 +109,8 @@ impl Slot for SlotRender {
                 },
             ],
         });
-        Self::Buffers {
-            render_bind_group,
+        SlotRenderBuffers {
+            bind_group,
         }
     }
     fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers) {
@@ -122,10 +122,10 @@ impl Slot for SlotRender {
         let output_view = frame.output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut graphics_encoder = program_init.device
+        let mut encoder = program_init.device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
-            let mut rpass: wgpu::RenderPass<'_> = graphics_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut rpass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &output_view,
@@ -139,8 +139,8 @@ impl Slot for SlotRender {
                 ..Default::default()
             });
 
-            rpass.set_pipeline(&self.init.render_pipeline);
-            rpass.set_bind_group(0, &self.buffers.render_bind_group, &[]);
+            rpass.set_pipeline(&self.init.pipeline);
+            rpass.set_bind_group(0, &self.buffers.bind_group, &[]);
             rpass.set_push_constants(
                 wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                 0,
@@ -149,6 +149,6 @@ impl Slot for SlotRender {
             rpass.draw(0..3, 0..1);
         }
 
-        program_init.queue.submit([graphics_encoder.finish()]);
+        program_init.queue.submit([encoder.finish()]);
     }
 }

@@ -9,12 +9,12 @@ pub struct SlotDiffuse {
 }
 
 pub struct SlotDiffuseInit {
-    pub compute_pipeline: wgpu::ComputePipeline,
-    pub compute_bind_group_layout: wgpu::BindGroupLayout,
+    pub pipeline: wgpu::ComputePipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
 }
 
 pub struct SlotDiffuseBuffers {
-    pub compute_bind_group: wgpu::BindGroup,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl Slot for SlotDiffuse {
@@ -22,7 +22,7 @@ impl Slot for SlotDiffuse {
     type Buffers = SlotDiffuseBuffers;
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
-        let compute_bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -38,9 +38,9 @@ impl Slot for SlotDiffuse {
             ],
         });
 
-        let compute_pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Compute pipeline layout"),
-            bind_group_layouts: &[&compute_bind_group_layout],
+            bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[wgpu::PushConstantRange {
                 stages: wgpu::ShaderStages::COMPUTE,
                 range: 0..std::mem::size_of::<ShaderConstants>() as u32,
@@ -48,18 +48,18 @@ impl Slot for SlotDiffuse {
         });
 
         // Compute
-        let compute_pipeline = program_init.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = program_init.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             compilation_options: Default::default(),
             cache: None,
             label: None,
-            layout: Some(&compute_pipeline_layout),
+            layout: Some(&pipeline_layout),
             module: &program_init.module,
             entry_point: Some(CS_ENTRY_POINT),
         });
 
         let init = SlotDiffuseInit {
-            compute_pipeline,
-            compute_bind_group_layout,
+            pipeline,
+            bind_group_layout,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
         Self {
@@ -69,9 +69,9 @@ impl Slot for SlotDiffuse {
     }
 
     fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
-        let compute_bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Compute bind group"),
-            layout: &init.compute_bind_group_layout,
+            layout: &init.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -80,7 +80,7 @@ impl Slot for SlotDiffuse {
             ],
         });
         SlotDiffuseBuffers {
-            compute_bind_group,
+            bind_group,
         }
     }
 
@@ -96,8 +96,8 @@ impl Slot for SlotDiffuse {
 
         {
             let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
-            cpass.set_bind_group(0, &self.buffers.compute_bind_group, &[]);
-            cpass.set_pipeline(&self.init.compute_pipeline);
+            cpass.set_bind_group(0, &self.buffers.bind_group, &[]);
+            cpass.set_pipeline(&self.init.pipeline);
             cpass.set_push_constants(
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),

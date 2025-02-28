@@ -13,13 +13,13 @@ pub struct SlotAgents {
 }
 
 pub struct SlotAgentsInit {
-    pub compute_pipeline: wgpu::ComputePipeline,
-    pub compute_bind_group_layout: wgpu::BindGroupLayout,
+    pub pipeline: wgpu::ComputePipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
     pub agents_buffer: wgpu::Buffer,
 }
 
 pub struct SlotAgentsBuffers {
-    pub compute_bind_group: wgpu::BindGroup,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl Slot for SlotAgents {
@@ -42,7 +42,7 @@ impl Slot for SlotAgents {
                 | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC,
         });
-        let compute_bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -68,9 +68,9 @@ impl Slot for SlotAgents {
             ],
         });
 
-        let compute_pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = program_init.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Compute pipeline layout"),
-            bind_group_layouts: &[&compute_bind_group_layout],
+            bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[wgpu::PushConstantRange {
                 stages: wgpu::ShaderStages::COMPUTE,
                 range: 0..std::mem::size_of::<ShaderConstants>() as u32,
@@ -78,18 +78,18 @@ impl Slot for SlotAgents {
         });
 
         // Compute
-        let compute_pipeline = program_init.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = program_init.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             compilation_options: Default::default(),
             cache: None,
             label: None,
-            layout: Some(&compute_pipeline_layout),
+            layout: Some(&pipeline_layout),
             module: &program_init.module,
             entry_point: Some(CS_ENTRY_POINT),
         });
 
         let init = SlotAgentsInit {
-            compute_pipeline,
-            compute_bind_group_layout,
+            pipeline,
+            bind_group_layout,
             agents_buffer,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
@@ -100,9 +100,9 @@ impl Slot for SlotAgents {
     }
 
     fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
-        let compute_bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("compute bind group"),
-            layout: &init.compute_bind_group_layout,
+            layout: &init.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -115,7 +115,7 @@ impl Slot for SlotAgents {
             ],
         });
         SlotAgentsBuffers {
-            compute_bind_group,
+            bind_group,
         }
     }
 
@@ -126,13 +126,13 @@ impl Slot for SlotAgents {
 
     fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame) {
         // Run compute pass
-        let mut compute_encoder =
+        let mut encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
         {
-            let mut cpass = compute_encoder.begin_compute_pass(&Default::default());
-            cpass.set_bind_group(0, &self.buffers.compute_bind_group, &[]);
-            cpass.set_pipeline(&self.init.compute_pipeline);
+            let mut cpass = encoder.begin_compute_pass(&Default::default());
+            cpass.set_bind_group(0, &self.buffers.bind_group, &[]);
+            cpass.set_pipeline(&self.init.pipeline);
             cpass.set_push_constants(
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
@@ -140,14 +140,14 @@ impl Slot for SlotAgents {
             cpass.dispatch_workgroups(configuration::NUM_AGENTS.div_ceil(16), 1, 1);
         }
 
-        compute_encoder.copy_buffer_to_buffer(
+        encoder.copy_buffer_to_buffer(
             &program_buffers.trail_buffer,
             0,
             &program_buffers.pixel_input_buffer,
             0,
             (program_buffers.num_bytes_screen_buffers) as wgpu::BufferAddress,
         );
-        program_init.queue.submit([compute_encoder.finish()]);
+        program_init.queue.submit([encoder.finish()]);
     }
 }
 
@@ -170,7 +170,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
             }
         }
         SpawnMode::CircleFacingInwards { max_distance } => {
-            let max_number = 1000;
+            let max_number = 100000;
             let random_angle = get_random_angle();
             let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
             let random_distance = random_fraction * *max_distance;
@@ -223,7 +223,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
 }
 
 fn get_random_angle() -> f32 {
-    let max_number = 1000;
+    let max_number = 100000;
     let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
     let random_angle = random_fraction * (std::f32::consts::PI * 2.0);
     random_angle
