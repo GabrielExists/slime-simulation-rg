@@ -4,6 +4,9 @@ pub const NUM_AGENTS: u32 = 10000;
 pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     // Pixels travelled per second
     velocity: 50.0,
+    turn_speed: 1.0,
+    sensor_angle_spacing: 60.0,
+    sensor_offset: 5.0,
 }];
 // Percent of full white to black transition per second.
 // 100.0 is completely faded after 1 second.

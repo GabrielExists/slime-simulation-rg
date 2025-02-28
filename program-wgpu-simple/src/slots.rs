@@ -1,4 +1,7 @@
+use std::time::Instant;
 use wgpu::util::DeviceExt;
+use crate::configuration;
+use shared::ShaderConstants;
 
 /// A slot is the backend that a shader "slots" into.
 /// Each shader has individual bindings and render steps that need to be matched in the cpu,
@@ -80,3 +83,29 @@ pub fn create_buffers(program_init: &ProgramInit, size: winit::dpi::PhysicalSize
     };
     buffers
 }
+
+pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::SurfaceTexture, start: &Instant, last_time: &mut Instant) -> Frame {
+    let time = start.elapsed().as_secs_f32();
+    let mut delta_time = last_time.elapsed().as_secs_f32();
+    // If we're slow enough, instead slow down the simulation
+    if delta_time < 1.0 / 50.0 {
+        delta_time = 1.0 / 50.0;
+    }
+    *last_time = std::time::Instant::now();
+    let push_constants = ShaderConstants {
+        width: program_buffers.width,
+        height: program_buffers.height,
+        time,
+        delta_time,
+        num_agents: configuration::NUM_AGENTS,
+        agent_stats: configuration::AGENT_STATS,
+        evaporate_speed: configuration::EVAPORATION_SPEED,
+        diffuse_speed: configuration::DIFFUSION_SPEED,
+    };
+    let frame = Frame {
+        output,
+        push_constants,
+    };
+    frame
+}
+

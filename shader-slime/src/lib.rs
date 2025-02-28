@@ -11,11 +11,6 @@ use spirv_std::{glam, spirv};
 #[cfg(target_arch = "spirv")]
 use spirv_std::num_traits::Float;
 
-// fn sense(agent: &Agent, angle_offset: f32) -> f32 {
-//     let sensor_angle = agent.angle + angle_offset;
-//     let sensor_center_x = agent.x + sensor_angle.cos()
-// }
-
 enum Bounds {
     InsideBounds,
     OutsideBounds,
@@ -30,13 +25,33 @@ pub fn main_cs(
 ) {
     let agent_index = id.x as usize;
     let agent = &mut agents_buffer[agent_index];
+    let agent_stats = &constants.agent_stats[0];
     let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
 
-    let mut line_end_x = agent.x + agent.angle.cos() * constants.agent_stats[0].velocity * constants.delta_time;
-    let mut line_end_y = agent.y + agent.angle.sin() * constants.agent_stats[0].velocity * constants.delta_time;
+    // Sensor based on sensory data
+    let weight_forward = sense(trail_buffer, constants, agent, &agent_stats, 0.0);
+    let weight_left = sense(trail_buffer, constants, agent, &agent_stats, agent_stats.sensor_angle_spacing);
+    let weight_right = sense(trail_buffer, constants, agent, &agent_stats, -agent_stats.sensor_angle_spacing);
+
+    let random_steer_strength = random as f32 / u32::MAX as f32;
+    // If center is stronger than edges, continue forward
+    if weight_forward > weight_left && weight_forward > weight_right {
+        agent.angle += 0.0;
+    }
+    // If edges are stronger than center, pick a direction randomly
+    else if weight_forward > weight_left && weight_forward > weight_right {
+        agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
+    }
+    // If there's a gradient in one direction, turn that way
+    else if weight_right > weight_left {
+        agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+    }
+    else if weight_left > weight_right {
+        agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+    }
 
     // Render each pixel inbetween here and the end of the streak we move this frame
-    let mut num_steps = constants.agent_stats[0].velocity * constants.delta_time;
+    let mut num_steps = agent_stats.velocity * constants.delta_time;
     let step = 1.0;
     let mut step_x = agent.x;
     let mut step_y = agent.y;
@@ -44,7 +59,7 @@ pub fn main_cs(
         while num_steps > step {
             step_x = step_x + agent.angle.cos() * step;
             step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, &vec2(step_x, step_y), constants);
+            let bounds = set_pixel(trail_buffer, constants, &vec2(step_x, step_y));
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -55,7 +70,7 @@ pub fn main_cs(
         // Do the last little leap
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
-        let bounds = set_pixel(trail_buffer, &vec2(step_x, step_y), constants);
+        let bounds = set_pixel(trail_buffer, constants, &vec2(step_x, step_y));
         if let Bounds::OutsideBounds = bounds {
             break 'clamp_block bounds;
         }
@@ -72,7 +87,28 @@ pub fn main_cs(
 
 }
 
-fn set_pixel(trail_buffer: &mut [u32], position: &Vec2, constants: &ShaderConstants) -> Bounds {
+fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> f32 {
+    let sensor_angle = agent.angle + angle_offset;
+    let sensor_center_x = agent.x + sensor_angle.cos() * agent_stats.sensor_offset;
+    let sensor_center_y = agent.y + sensor_angle.sin() * agent_stats.sensor_offset;
+    let mut sum = 0.0;
+
+    for offset_x in -1..=1 {
+        for offset_y in -1..=1 {
+            let pos_x = sensor_center_x + offset_x as f32;
+            let pos_y = sensor_center_y + offset_y as f32;
+
+            if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
+                let index = pos_x as usize * constants.width as usize + pos_y as usize;
+                sum += trail_buffer[index] as f32 / u32::MAX as f32;
+            }
+        }
+    }
+    return sum
+}
+
+
+fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, position: &Vec2) -> Bounds {
     if is_inside_bounds(position, constants) {
         let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
         trail_buffer[pixel_index] = 0xFFFFFFFF;

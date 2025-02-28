@@ -35,6 +35,9 @@ pub struct ShaderConstants {
 pub struct AgentStats {
     // Pixels travelled per second
     pub velocity: f32,
+    pub turn_speed: f32,
+    pub sensor_angle_spacing: f32,
+    pub sensor_offset: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
