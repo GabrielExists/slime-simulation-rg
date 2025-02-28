@@ -115,4 +115,24 @@ impl<'storage> PixelView<'storage> {
     pub fn set_w(&mut self, value: u32) {
         *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
     }
+    pub fn set_x_frac(&mut self, value: f32) {
+        self.set_x(int_from_frac(value))
+    }
+    pub fn set_y_frac(&mut self, value: f32) {
+        self.set_y(int_from_frac(value))
+    }
+    pub fn set_z_frac(&mut self, value: f32) {
+        self.set_z(int_from_frac(value))
+    }
+    pub fn set_w_frac(&mut self, value: f32) {
+        self.set_w(int_from_frac(value))
+    }
+}
+
+pub const PIXEL_MAX: u32 = 255;
+pub fn frac_from_int(value: u32) -> f32 {
+    value as f32 / PIXEL_MAX as f32
+}
+pub fn int_from_frac(value: f32) -> u32 {
+    (value * PIXEL_MAX as f32) as u32
 }
