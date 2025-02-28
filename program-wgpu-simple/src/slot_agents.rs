@@ -28,8 +28,8 @@ impl Slot for SlotAgents {
             .take(configuration::NUM_AGENTS as usize)
             .flat_map(|()| {
                 let agent = shared::Agent {
-                    x: program_buffers.width as f32 / 2.0,
-                    y: program_buffers.height as f32 / 2.0,
+                    x: 100.0,//program_buffers.width as f32 / 2.0,
+                    y: 100.0,// program_buffers.height as f32 / 2.0,
                     angle: rand::rng().random_range(0..1000) as f32 / (std::f32::consts::PI * 2.0),
                 };
                 bytemuck::bytes_of(&agent).to_vec()

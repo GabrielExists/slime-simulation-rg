@@ -6,6 +6,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+use winit::window::Fullscreen;
 use crate::slot_agents::SlotAgents;
 use crate::slot_render::SlotRender;
 use slots::{Frame, ProgramInit};
@@ -24,11 +25,22 @@ pub fn run() {
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
     #[allow(deprecated)]
+    #[cfg(target_arch = "aarch64")]
+    let window = event_loop
+    .create_window(
+        Window::default_attributes()
+            .with_title("Rust GPU - wgpu")
+            .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
+            .with_fullscreen(Some(Fullscreen::Borderless(None))),
+    )
+    .unwrap();
+    #[allow(deprecated)]
+    #[cfg(not(target_arch = "aarch64"))]
         let window = event_loop
         .create_window(
             Window::default_attributes()
                 .with_title("Rust GPU - wgpu")
-                .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0)),
+                .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
         )
         .unwrap();
 
@@ -239,7 +251,11 @@ async fn run_inner(
                         }
                     };
                     let time = start.elapsed().as_secs_f32();
-                    let delta_time = last_time.elapsed().as_secs_f32();
+                    let mut delta_time = last_time.elapsed().as_secs_f32();
+                    // If we're slow enough, instead slow down the simulation
+                    if delta_time < 1.0 / 50.0 {
+                        delta_time = 1.0 / 50.0;
+                    }
                     last_time = std::time::Instant::now();
                     let push_constants = ShaderConstants {
                         width: program_buffers.width,
@@ -262,7 +278,6 @@ async fn run_inner(
 
                     frame.output.present();
                 }
-
             }
             Event::WindowEvent {
                 event:

@@ -159,6 +159,9 @@ def bld_deploy_run(args):
             print(f"No application found at {source_path}")
             sys.exit(1)
         scp_target_dest = f'{ssh_target_ident}:"{dest_path}"'
+        kill_cmd = f"{sshpass_cmd} ssh {ssh_target_ident} killall -q {args.app}"
+        print(f"Making target application executable: {kill_cmd}")
+        os.system(kill_cmd)
         transfer_cmd = f"{sshpass_cmd} scp {source_path} {scp_target_dest}"
         print(f"Running transfer command: {transfer_cmd}")
         os.system(transfer_cmd)

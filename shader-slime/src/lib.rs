@@ -11,6 +11,16 @@ use spirv_std::{glam, spirv};
 #[cfg(target_arch = "spirv")]
 use spirv_std::num_traits::Float;
 
+// fn sense(agent: &Agent, angle_offset: f32) -> f32 {
+//     let sensor_angle = agent.angle + angle_offset;
+//     let sensor_center_x = agent.x + sensor_angle.cos()
+// }
+
+enum Bounds {
+    InsideBounds,
+    OutsideBounds,
+}
+
 #[spirv(compute(threads(16)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -22,21 +32,60 @@ pub fn main_cs(
     let agent = &mut agents_buffer[agent_index];
     let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
 
-    let mut new_x = agent.x + agent.angle.cos() * constants.agent_stats[0].velocity * constants.delta_time;
-    let mut new_y = agent.y + agent.angle.sin() * constants.agent_stats[0].velocity * constants.delta_time;
-    if new_x < 0.0 || new_x > constants.width as f32 || new_y < 0.0 || new_y > constants.height as f32 {
-        new_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, new_x));
-        new_y = f32::min(constants.height as f32 - 0.01, f32::max(0.0, new_y));
+    let mut line_end_x = agent.x + agent.angle.cos() * constants.agent_stats[0].velocity * constants.delta_time;
+    let mut line_end_y = agent.y + agent.angle.sin() * constants.agent_stats[0].velocity * constants.delta_time;
+
+    // Render each pixel inbetween here and the end of the streak we move this frame
+    let mut num_steps = constants.agent_stats[0].velocity * constants.delta_time;
+    let step = 1.0;
+    let mut step_x = agent.x;
+    let mut step_y = agent.y;
+    let bounds: Bounds = 'clamp_block: loop {
+        while num_steps > step {
+            step_x = step_x + agent.angle.cos() * step;
+            step_y = step_y + agent.angle.sin() * step;
+            let bounds = set_pixel(trail_buffer, &vec2(step_x, step_y), constants);
+            if let Bounds::OutsideBounds = bounds {
+                break 'clamp_block bounds;
+            }
+            num_steps -= step;
+        }
+        // If we didn't go outside the window, which is the normal case,
+        // num_steps is now smaller than 1.0
+        // Do the last little leap
+        step_x = step_x + agent.angle.cos() * num_steps;
+        step_y = step_y + agent.angle.sin() * num_steps;
+        let bounds = set_pixel(trail_buffer, &vec2(step_x, step_y), constants);
+        if let Bounds::OutsideBounds = bounds {
+            break 'clamp_block bounds;
+        }
+        break 'clamp_block Bounds::InsideBounds;
+    };
+    if let Bounds::OutsideBounds = bounds {
+        step_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, step_x));
+        step_y = f32::min(constants.height as f32 - 0.01, f32::max(0.0, step_y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
-    agent.x = new_x;
-    agent.y = new_y;
 
-    if agent.x < constants.width as f32 && agent.y < constants.height as f32 {
-        let pixel_index = agent.y as usize * constants.width as usize + agent.x as usize;
+    agent.x = step_x;
+    agent.y = step_y;
+
+}
+
+fn set_pixel(trail_buffer: &mut [u32], position: &Vec2, constants: &ShaderConstants) -> Bounds {
+    if is_inside_bounds(position, constants) {
+        let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
         trail_buffer[pixel_index] = 0xFFFFFFFF;
+        Bounds::InsideBounds
+    } else {
+        Bounds::OutsideBounds
     }
 }
+
+fn is_inside_bounds(position: &Vec2, constants: &ShaderConstants) -> bool {
+    position.x > 0.0 && position.x < constants.width as f32 && position.y > 0.0 && position.y < constants.height as f32
+}
+
 
 #[spirv(compute(threads(16, 16)))]
 pub fn diffuse_cs(
