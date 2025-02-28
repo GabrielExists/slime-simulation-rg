@@ -50,11 +50,6 @@ pub fn main_cs(
     else if weight_left > weight_right {
         agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
     }
-    // if weight_forward < 0.4 {
-    //     agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time / 2.0;
-    // } else {
-    //     agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
-    // }
 
     // Render each pixel inbetween here and the end of the streak we move this frame
     let mut num_steps = agent_stats.velocity * constants.delta_time;
@@ -106,7 +101,6 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                // sum += pixel_view(&mut trail_buffer[index]).x_frac();
                 sum += pixel_fraction_from_int(trail_buffer[index]);
             }
         }
@@ -118,12 +112,9 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: &Vec2) -> Bounds {
     if is_inside_bounds(position, constants) {
         let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
-        // let mut value = trail_buffer[pixel_index] as f32;
-        // value += agent_stats.pixel_addition as f32;
-        // trail_buffer[pixel_index] = f32::min(value, PIXEL_MAX as f32) as u32;
         let mut pixel = pixel_view(&mut trail_buffer[pixel_index]);
         let mut value_frac = pixel.x_frac() as f32;
-        value_frac += pixel_fraction_from_int(agent_stats.pixel_addition);
+        value_frac += agent_stats.pixel_addition;
         pixel.set_x_frac(f32::min(value_frac, 1.0));
         Bounds::InsideBounds
     } else {
@@ -152,27 +143,19 @@ pub fn diffuse_cs(
             if sample_x >= 0 && sample_x < constants.width as i32 && sample_y >= 0 && sample_y < constants.height as i32 {
                 let sample_index: usize = sample_y as usize * constants.width as usize + sample_x as usize;
                 sum += pixel_view(&mut trail_buffer[sample_index]).x_frac();
-                // sum += pixel_fraction_from_int(trail_buffer[sample_index]);
             }
         }
     }
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
         pixel_view(&mut trail_buffer[index]).x_frac(),
-        // pixel_fraction_from_int(trail_buffer[index]),
         blur_result,
         (constants.diffuse_speed / 100.0) * constants.delta_time
     );
-    // let diffused_upscaled = pixel_int_from_fraction(diffused_value) as f32;
-    // // trail_buffer[index] = (diffused_value * u32::MAX as f32) as u32;
-    // let evaporation_this_tick = (constants.evaporate_speed * u32::MAX as f32 / 100.0) * constants.delta_time;
-    // let new_value = f32::max(0.0, diffused_upscaled - evaporation_this_tick) as u32;
-    // trail_buffer[index] = new_value;
 
     let evaporation_this_tick = (constants.evaporate_speed / 100.0) * constants.delta_time;
     let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-    // trail_buffer[index] = pixel_int_from_fraction(new_value);
-    pixel_view(&mut trail_buffer[index]).set_x(pixel_u8_from_fraction(new_value));
+    pixel_view(&mut trail_buffer[index]).set_x_frac(new_value);
 }
 
 #[spirv(fragment)]
@@ -189,7 +172,7 @@ pub fn main_fs(
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
 
     let pixel = pixel_view(&mut trail_buffer[index]);
-    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
+    *output = vec4(0.0, pixel.x_frac(), 0.0, 1.0)
 }
 
 #[spirv(vertex)]

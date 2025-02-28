@@ -27,7 +27,7 @@ pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     turn_speed: PI * 80.0,
     sensor_angle_spacing: PI / 3.0,
     sensor_offset: 5.0,
-    pixel_addition: 0x0FFFFFFF,
+    pixel_addition: 1.0 / 255.0,
 }];
 // Percent of full white to black transition per second.
 // 100.0 is completely faded after 1 second.
