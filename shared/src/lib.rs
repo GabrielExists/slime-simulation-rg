@@ -89,32 +89,67 @@ pub fn pixel_view(storage: &mut u32) -> PixelView {
     PixelView::new(storage)
 }
 
+// impl<'storage> PixelView<'storage> {
+//     pub fn new(storage: &'storage mut u32) -> Self {
+//         PixelView {
+//             storage,
+//         }
+//     }
+//     pub fn x(&self) -> u32 { *self.storage >> 24 }
+//     pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
+//     pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
+//     pub fn w(&self) -> u32 { *self.storage & 0xFF }
+//     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
+//     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
+//     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
+//     pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
+//     pub fn set_x(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0x00FFFFFF | value << 24;
+//     }
+//     pub fn set_y(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
+//     }
+//     pub fn set_z(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
+//     }
+//     pub fn set_w(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+//     }
+//     pub fn set_x_frac(&mut self, value: f32) {
+//         self.set_x(int_from_frac(value))
+//     }
+//     pub fn set_y_frac(&mut self, value: f32) {
+//         self.set_y(int_from_frac(value))
+//     }
+//     pub fn set_z_frac(&mut self, value: f32) {
+//         self.set_z(int_from_frac(value))
+//     }
+//     pub fn set_w_frac(&mut self, value: f32) {
+//         self.set_w(int_from_frac(value))
+//     }
+// }
+
 impl<'storage> PixelView<'storage> {
     pub fn new(storage: &'storage mut u32) -> Self {
         PixelView {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 24 }
-    pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
-    pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
-    pub fn w(&self) -> u32 { *self.storage & 0xFF }
+    pub fn x(&self) -> u32 { (*self.storage >> 16) & 0xFFFF }
+    pub fn y(&self) -> u32 { (*self.storage >> 8) & 0xFF }
+    pub fn z(&self) -> u32 { *self.storage & 0xFF }
+    pub fn set_x(&mut self, value: u32) {
+        *self.storage = *self.storage & 0x0000FFFF | (value & 0xFFFF) << 16;
+    }
+    pub fn set_y(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
+    }
+    pub fn set_z(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+    }
     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
-    pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
-    pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0x00FFFFFF | value << 24;
-    }
-    pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
-    }
-    pub fn set_z(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
-    }
-    pub fn set_w(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
-    }
     pub fn set_x_frac(&mut self, value: f32) {
         self.set_x(int_from_frac(value))
     }
@@ -124,10 +159,8 @@ impl<'storage> PixelView<'storage> {
     pub fn set_z_frac(&mut self, value: f32) {
         self.set_z(int_from_frac(value))
     }
-    pub fn set_w_frac(&mut self, value: f32) {
-        self.set_w(int_from_frac(value))
-    }
 }
+
 
 pub const PIXEL_MAX: u32 = 255;
 pub fn frac_from_int(value: u32) -> f32 {

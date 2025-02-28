@@ -11,11 +11,13 @@ pub struct SlotAgents {
     pub init: SlotAgentsInit,
     pub buffers: SlotAgentsBuffers,
 }
+
 pub struct SlotAgentsInit {
     pub compute_pipeline: wgpu::ComputePipeline,
     pub compute_bind_group_layout: wgpu::BindGroupLayout,
     pub agents_buffer: wgpu::Buffer,
 }
+
 pub struct SlotAgentsBuffers {
     pub compute_bind_group: wgpu::BindGroup,
 }
@@ -150,6 +152,8 @@ impl Slot for SlotAgents {
 }
 
 fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shared::Agent {
+    let center_x = program_buffers.width as f32 / 2.0;
+    let center_y = program_buffers.height as f32 / 2.0;
     match spawn_mode {
         SpawnMode::CenterFacingOutwards => {
             shared::Agent {
@@ -166,8 +170,6 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
             }
         }
         SpawnMode::CircleFacingInwards { max_distance } => {
-            let center_x = program_buffers.width as f32 / 2.0;
-            let center_y = program_buffers.height as f32 / 2.0;
             let max_number = 1000;
             let random_angle = get_random_angle();
             let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
@@ -185,6 +187,38 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 angle: get_random_angle(),
             }
         }
+        SpawnMode::CircumferenceFacingInward { distance } => {
+            let random_angle = get_random_angle();
+            shared::Agent {
+                x: center_x + random_angle.cos() * distance,
+                y: center_y + random_angle.sin() * distance,
+                angle: std::f32::consts::PI + random_angle,
+            }
+        },
+        SpawnMode::CircumferenceFacingOutward { distance } => {
+            let random_angle = get_random_angle();
+            shared::Agent {
+                x: center_x + random_angle.cos() * distance,
+                y: center_y + random_angle.sin() * distance,
+                angle: random_angle,
+            }
+        },
+        SpawnMode::CircumferenceFacingRandom { distance } => {
+            let random_angle = get_random_angle();
+            shared::Agent {
+                x: center_x + random_angle.cos() * distance,
+                y: center_y + random_angle.sin() * distance,
+                angle: get_random_angle(),
+            }
+        },
+        SpawnMode::CircumferenceFacingClockwise { distance } => {
+            let random_angle = get_random_angle();
+            shared::Agent {
+                x: center_x + random_angle.cos() * distance,
+                y: center_y + random_angle.sin() * distance,
+                angle: std::f32::consts::PI / 2.0 + random_angle,
+            }
+        },
     }
 }
 

@@ -8,7 +8,7 @@ edition = "2024"
 crate-type = ["dylib"]
 
 [dependencies]
-spirv-std = { workspace = true, features = ["bytemuck"] }
+spirv-std = { workspace = true }
 shared = { path = "../shared" }
 bytemuck = { version = "1.18.0", features = ["derive"] }
 

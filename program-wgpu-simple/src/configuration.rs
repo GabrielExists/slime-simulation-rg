@@ -12,12 +12,24 @@ pub enum SpawnMode {
     CircleFacingInwards {
         max_distance: f32,
     },
-
+    CircumferenceFacingInward {
+        distance: f32,
+    },
+    CircumferenceFacingOutward {
+        distance: f32,
+    },
+    CircumferenceFacingRandom {
+        distance: f32,
+    },
+    CircumferenceFacingClockwise {
+        distance: f32,
+    },
 }
-pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
-    max_distance: 250.0,
-};
+// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
+//     max_distance: 250.0,
+// };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::EvenlyDistributed;
+pub const SPAWN_MODE: SpawnMode = SpawnMode::CenterFacingOutwards;
 pub const TIME_SCALE: f32 = 1.0;
 pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
 pub const NUM_AGENTS: u32 = 10000;
@@ -27,7 +39,7 @@ pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
     turn_speed: PI * 80.0,
     sensor_angle_spacing: PI / 3.0,
     sensor_offset: 5.0,
-    pixel_addition: 1.0 / 255.0,
+    pixel_addition: 1.0 / 5.0,
 }];
 // Percent of full white to black transition per second.
 // 100.0 is completely faded after 1 second.

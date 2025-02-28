@@ -35,20 +35,36 @@ pub fn main_cs(
 
     let random_steer_strength = random as f32 / u32::MAX as f32;
 
-    // If center is stronger than edges, continue forward
-    if weight_forward > weight_left && weight_forward > weight_right {
-        agent.angle += 0.0;
-    }
-    // If edges are stronger than center, pick a direction randomly
-    else if weight_left > weight_forward && weight_right > weight_forward {
-        agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
-    }
-    // If there's a gradient in one direction, turn that way
-    else if weight_right > weight_left {
-        agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
-    }
-    else if weight_left > weight_right {
-        agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+    match (weight_left, weight_forward, weight_right) {
+        (None, _, Some(_)) => {
+            agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+        }
+        (Some(_), _, None) => {
+            agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+        }
+        (Some(_), None, Some(_)) => {
+            agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
+        }
+        (None, _, None) => {
+            agent.angle += 0.0;
+        }
+        (Some(weight_left), Some(weight_forward), Some(weight_right)) => {
+            // If center is stronger than edges, continue forward
+            if weight_forward > weight_left &&weight_forward > weight_right {
+                agent.angle += 0.0;
+            }
+            // If edges are stronger than center, pick a direction randomly
+            else if weight_left > weight_forward &&weight_right > weight_forward {
+                agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
+            }
+            // If there's a gradient in one direction, turn that way
+            else if weight_right > weight_left {
+                agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+            }
+            else if weight_left > weight_right {
+                agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+            }
+        }
     }
 
     // Render each pixel inbetween here and the end of the streak we move this frame
@@ -88,7 +104,7 @@ pub fn main_cs(
 
 }
 
-fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> f32 {
+fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
     let sensor_angle = agent.angle + angle_offset;
     let sensor_center_x = agent.x + sensor_angle.cos() * agent_stats.sensor_offset;
     let sensor_center_y = agent.y + sensor_angle.sin() * agent_stats.sensor_offset;
@@ -101,11 +117,15 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_fraction_from_int(trail_buffer[index]);
+                sum += pixel_view(&mut trail_buffer[index]).x_frac();
             }
         }
     }
-    return sum
+    if sum > 8.5 {
+        None
+    } else {
+        Some(sum)
+    }
 }
 
 
@@ -197,18 +217,4 @@ fn hash(mut state: u32) -> u32 {
     state ^= state >> 16;
     state *= 2654435769u32;
     state
-}
-
-const PIXEL_MAX: u32 = u32::MAX;
-fn pixel_fraction_from_int(value: u32) -> f32 {
-    value as f32 / PIXEL_MAX as f32
-}
-fn pixel_int_from_fraction(value: f32) -> u32 {
-    (value * PIXEL_MAX as f32) as u32
-}
-fn pixel_fraction_from_u8(value: u32) -> f32 {
-    value as f32 / 255 as f32
-}
-fn pixel_u8_from_fraction(value: f32) -> u32 {
-    (value * 255 as f32) as u32
 }
