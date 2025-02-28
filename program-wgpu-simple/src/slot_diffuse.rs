@@ -102,7 +102,7 @@ impl Slot for SlotDiffuse {
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
             );
-            cpass.dispatch_workgroups(program_buffers.width.div_ceil(16), program_buffers.height.div_ceil(16), 1);
+            cpass.dispatch_workgroups(program_buffers.width.div_ceil(8), program_buffers.height.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
     }

@@ -37,13 +37,13 @@ pub fn main_cs(
 
     match (weight_left, weight_forward, weight_right) {
         (None, _, Some(_)) => {
-            agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+            agent.angle -= random_steer_strength * agent_stats.turn_speed_avoidance * constants.delta_time;
         }
         (Some(_), _, None) => {
-            agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+            agent.angle += random_steer_strength * agent_stats.turn_speed_avoidance * constants.delta_time;
         }
         (Some(_), None, Some(_)) => {
-            agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
+            agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed_avoidance * constants.delta_time;
         }
         (None, _, None) => {
             agent.angle += 0.0;
@@ -121,7 +121,7 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
             }
         }
     }
-    if sum > 8.5 {
+    if sum > 6.0 {
         None
     } else {
         Some(sum)
@@ -147,13 +147,19 @@ fn is_inside_bounds(position: &Vec2, constants: &ShaderConstants) -> bool {
 }
 
 
-#[spirv(compute(threads(16, 16)))]
+#[spirv(compute(threads(8, 8, 3)))]
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
 ) {
     let index = id.y as usize * constants.width as usize + id.x as usize;
+    let channel_index = id.z as usize;
+    if channel_index >= constants.agent_stats.len() {
+        return;
+    }
+    let diffusion_speed = constants.agent_stats[channel_index].diffusion_speed;
+    let evaporation_speed = constants.agent_stats[channel_index].evaporation_speed;
 
     let mut sum = 0.0;
     for offset_x in -1..=1 {
@@ -162,20 +168,20 @@ pub fn diffuse_cs(
             let sample_y = id.y as i32 + offset_y;
             if sample_x >= 0 && sample_x < constants.width as i32 && sample_y >= 0 && sample_y < constants.height as i32 {
                 let sample_index: usize = sample_y as usize * constants.width as usize + sample_x as usize;
-                sum += pixel_view(&mut trail_buffer[sample_index]).x_frac();
+                sum += pixel_view(&mut trail_buffer[sample_index]).get_frac(channel_index);
             }
         }
     }
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
-        pixel_view(&mut trail_buffer[index]).x_frac(),
+        pixel_view(&mut trail_buffer[index]).get_frac(channel_index),
         blur_result,
-        (constants.diffuse_speed / 100.0) * constants.delta_time
+        (diffusion_speed / 100.0) * constants.delta_time
     );
 
-    let evaporation_this_tick = (constants.evaporate_speed / 100.0) * constants.delta_time;
+    let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
     let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-    pixel_view(&mut trail_buffer[index]).set_x_frac(new_value);
+    pixel_view(&mut trail_buffer[index]).set_frac(channel_index, new_value);
 }
 
 #[spirv(fragment)]
@@ -192,7 +198,7 @@ pub fn main_fs(
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
 
     let pixel = pixel_view(&mut trail_buffer[index]);
-    *output = vec4(0.0, pixel.x_frac(), 0.0, 1.0)
+    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
 }
 
 #[spirv(vertex)]

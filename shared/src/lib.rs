@@ -14,6 +14,33 @@ use spirv_std::num_traits::Float;
 
 use bytemuck::{Pod, Zeroable};
 
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
+pub enum SpawnMode {
+    EvenlyDistributed,
+    CenterFacingOutwards,
+    PointFacingOutwards {
+        x: f32,
+        y: f32,
+    },
+    CircleFacingInwards {
+        max_distance: f32,
+    },
+    CircumferenceFacingInward {
+        distance: f32,
+    },
+    CircumferenceFacingOutward {
+        distance: f32,
+    },
+    CircumferenceFacingRandom {
+        distance: f32,
+    },
+    CircumferenceFacingClockwise {
+        distance: f32,
+    },
+}
+
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
@@ -21,13 +48,14 @@ pub struct ShaderConstants {
     pub height: u32,
     pub time: f32,
     pub delta_time: f32,
-    pub num_agents: u32,
-    pub agent_stats: [AgentStats; 1],
-    // Percent of full white to black transition per second.
-    // 100.0 is completely faded after 1 second.
-    // 50.0 is completely faded after 2 seconds.
-    pub evaporate_speed: f32,
-    pub diffuse_speed: f32,
+    pub agent_stats: [AgentStats; 3],
+}
+
+#[derive(Copy, Clone)]
+pub struct AgentStatsAll {
+    pub spawn_mode: SpawnMode,
+    pub num_agents: usize,
+    pub shader_stats: AgentStats,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -36,9 +64,23 @@ pub struct AgentStats {
     // Pixels travelled per second
     pub velocity: f32,
     pub turn_speed: f32,
+    pub turn_speed_avoidance: f32,
     pub sensor_angle_spacing: f32,
     pub sensor_offset: f32,
     pub pixel_addition: f32,
+    // Maximum value is 9.0
+    // Minimum value is 0.0
+    // Setting a value over 9 effectively disables avoidance of saturated trails
+    pub avoidance_threshold: f32,
+    // Percent of full white to black transition per second.
+    // 100.0 is completely faded after 1 second.
+    // 50.0 is completely faded after 2 seconds.
+    pub evaporation_speed: f32,
+    // Speed of diffusion in percent.
+    // Reaching 90% takes 1 second if set to 240%.
+    // Reaching 86% takes 1 second if set to 200%.
+    // Reaching 63% takes 1 second if set to 100%.
+    pub diffusion_speed: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -89,67 +131,51 @@ pub fn pixel_view(storage: &mut u32) -> PixelView {
     PixelView::new(storage)
 }
 
-// impl<'storage> PixelView<'storage> {
-//     pub fn new(storage: &'storage mut u32) -> Self {
-//         PixelView {
-//             storage,
-//         }
-//     }
-//     pub fn x(&self) -> u32 { *self.storage >> 24 }
-//     pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
-//     pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
-//     pub fn w(&self) -> u32 { *self.storage & 0xFF }
-//     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
-//     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
-//     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
-//     pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
-//     pub fn set_x(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0x00FFFFFF | value << 24;
-//     }
-//     pub fn set_y(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
-//     }
-//     pub fn set_z(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
-//     }
-//     pub fn set_w(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
-//     }
-//     pub fn set_x_frac(&mut self, value: f32) {
-//         self.set_x(int_from_frac(value))
-//     }
-//     pub fn set_y_frac(&mut self, value: f32) {
-//         self.set_y(int_from_frac(value))
-//     }
-//     pub fn set_z_frac(&mut self, value: f32) {
-//         self.set_z(int_from_frac(value))
-//     }
-//     pub fn set_w_frac(&mut self, value: f32) {
-//         self.set_w(int_from_frac(value))
-//     }
-// }
-
 impl<'storage> PixelView<'storage> {
     pub fn new(storage: &'storage mut u32) -> Self {
         PixelView {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { (*self.storage >> 16) & 0xFFFF }
-    pub fn y(&self) -> u32 { (*self.storage >> 8) & 0xFF }
-    pub fn z(&self) -> u32 { *self.storage & 0xFF }
-    pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0x0000FFFF | (value & 0xFFFF) << 16;
-    }
-    pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
-    }
-    pub fn set_z(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+    pub fn x(&self) -> u32 { *self.storage >> 24 }
+    pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
+    pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
+    pub fn w(&self) -> u32 { *self.storage & 0xFF }
+    pub fn get(&self, index: usize) -> u32 {
+        match index {
+            0 => self.x(),
+            1 => self.y(),
+            2 => self.z(),
+            _ => self.w(),
+        }
     }
     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
+    pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
+    pub fn get_frac(&self, index: usize) -> f32 {
+        frac_from_int(self.get(index))
+    }
+    pub fn set_x(&mut self, value: u32) {
+        *self.storage = *self.storage & 0x00FFFFFF | value << 24;
+    }
+    pub fn set_y(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
+    }
+    pub fn set_z(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
+    }
+    pub fn set_w(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+    }
+    pub fn set(&mut self, index: usize, value: u32) {
+        match index {
+            0 => self.set_x(value),
+            1 => self.set_y(value),
+            2 => self.set_z(value),
+            _ => self.set_w(value),
+        }
+    }
     pub fn set_x_frac(&mut self, value: f32) {
         self.set_x(int_from_frac(value))
     }
@@ -159,13 +185,58 @@ impl<'storage> PixelView<'storage> {
     pub fn set_z_frac(&mut self, value: f32) {
         self.set_z(int_from_frac(value))
     }
+    pub fn set_w_frac(&mut self, value: f32) {
+        self.set_w(int_from_frac(value))
+    }
+    pub fn set_frac(&mut self, index: usize, value: f32) {
+        match index {
+            0 => self.set_x_frac(value),
+            1 => self.set_y_frac(value),
+            2 => self.set_z_frac(value),
+            _ => self.set_w_frac(value),
+        }
+    }
 }
+
+// impl<'storage> PixelView<'storage> {
+//     pub fn new(storage: &'storage mut u32) -> Self {
+//         PixelView {
+//             storage,
+//         }
+//     }
+//     pub fn x(&self) -> u32 { (*self.storage >> 16) & 0xFFFF }
+//     pub fn y(&self) -> u32 { (*self.storage >> 8) & 0xFF }
+//     pub fn z(&self) -> u32 { *self.storage & 0xFF }
+//     pub fn set_x(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0x0000FFFF | (value & 0xFFFF) << 16;
+//     }
+//     pub fn set_y(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
+//     }
+//     pub fn set_z(&mut self, value: u32) {
+//         *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+//     }
+//     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
+//     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
+//     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
+//     pub fn set_x_frac(&mut self, value: f32) {
+//         self.set_x(int_from_frac(value))
+//     }
+//     pub fn set_y_frac(&mut self, value: f32) {
+//         self.set_y(int_from_frac(value))
+//     }
+//     pub fn set_z_frac(&mut self, value: f32) {
+//         self.set_z(int_from_frac(value))
+//     }
+// }
 
 
 pub const PIXEL_MAX: u32 = 255;
+
 pub fn frac_from_int(value: u32) -> f32 {
     value as f32 / PIXEL_MAX as f32
 }
+
 pub fn int_from_frac(value: f32) -> u32 {
     (value * PIXEL_MAX as f32) as u32
 }

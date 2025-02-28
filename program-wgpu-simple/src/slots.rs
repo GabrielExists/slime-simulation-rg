@@ -101,10 +101,7 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
         height: program_buffers.height,
         time,
         delta_time,
-        num_agents: configuration::NUM_AGENTS,
-        agent_stats: configuration::AGENT_STATS,
-        evaporate_speed: configuration::EVAPORATION_SPEED,
-        diffuse_speed: configuration::DIFFUSION_SPEED,
+        agent_stats: configuration::AGENT_STATS.map(|stats_all| stats_all.shader_stats),
     };
     let frame = Frame {
         output,

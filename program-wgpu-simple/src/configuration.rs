@@ -1,57 +1,64 @@
 use std::f32::consts::PI;
-use shared::AgentStats;
+use shared::*;
 
-#[allow(dead_code)]
-pub enum SpawnMode {
-    EvenlyDistributed,
-    CenterFacingOutwards,
-    PointFacingOutwards {
-        x: f32,
-        y: f32,
-    },
-    CircleFacingInwards {
-        max_distance: f32,
-    },
-    CircumferenceFacingInward {
-        distance: f32,
-    },
-    CircumferenceFacingOutward {
-        distance: f32,
-    },
-    CircumferenceFacingRandom {
-        distance: f32,
-    },
-    CircumferenceFacingClockwise {
-        distance: f32,
-    },
-}
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
 //     max_distance: 250.0,
 // };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::EvenlyDistributed;
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CenterFacingOutwards;
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingInward { distance: 220.0 };
-pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingOutward { distance: 170.0 };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingRandom { distance: 220.0 };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingClockwise { distance: 220.0 };
 pub const TIME_SCALE: f32 = 1.0;
 pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
-pub const NUM_AGENTS: u32 = 10000;
-pub const AGENT_STATS: [AgentStats; 1] = [AgentStats {
-    // Pixels travelled per second
-    velocity: 65.0,
-    turn_speed: PI * 80.0,
-    sensor_angle_spacing: PI / 3.0,
-    sensor_offset: 5.0,
-    pixel_addition: 1.0 / 5.0,
-}];
-// Percent of full white to black transition per second.
-// 100.0 is completely faded after 1 second.
-// 50.0 is completely faded after 2 seconds.
-pub const EVAPORATION_SPEED: f32 = 50.0;
-
-// Speed of diffusion in percent.
-// Reaching 90% takes 1 second if set to 240%.
-// Reaching 86% takes 1 second if set to 200%.
-// Reaching 63% takes 1 second if set to 100%.
-pub const DIFFUSION_SPEED: f32 = 180.0;
+pub const NUM_AGENT_TYPES: usize = 3;
+pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
+    AgentStatsAll {
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170.0 },
+        num_agents: 10000,
+        shader_stats: AgentStats {
+            // Pixels travelled per second
+            velocity: 65.0,
+            turn_speed: PI * 30.0,
+            turn_speed_avoidance: PI * 30.0,
+            sensor_angle_spacing: PI / 3.0,
+            sensor_offset: 5.0,
+            pixel_addition: 1.0 / 10.0,
+            avoidance_threshold: 3.0,
+            evaporation_speed: 50.0,
+            diffusion_speed: 50.0,
+        },
+    },
+    AgentStatsAll {
+        spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 170.0 },
+        num_agents: 10000,
+        shader_stats: AgentStats {
+            // Pixels travelled per second
+            velocity: 65.0,
+            turn_speed: PI * 30.0,
+            turn_speed_avoidance: PI * 30.0,
+            sensor_angle_spacing: PI / 3.0,
+            sensor_offset: 5.0,
+            pixel_addition: 1.0 / 10.0,
+            avoidance_threshold: 3.0,
+            evaporation_speed: 50.0,
+            diffusion_speed: 50.0,
+        },
+    },
+    AgentStatsAll {
+        spawn_mode: SpawnMode::CircleFacingInwards { max_distance: 170.0 },
+        num_agents: 10000,
+        shader_stats: AgentStats {
+            // Pixels travelled per second
+            velocity: 65.0,
+            turn_speed: PI * 30.0,
+            turn_speed_avoidance: PI * 30.0,
+            sensor_angle_spacing: PI / 3.0,
+            sensor_offset: 5.0,
+            pixel_addition: 1.0 / 10.0,
+            avoidance_threshold: 10.0,
+            evaporation_speed: 50.0,
+            diffusion_speed: 50.0,
+        },
+    },
+];
