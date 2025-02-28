@@ -29,7 +29,7 @@ pub fn run() {
     .create_window(
         Window::default_attributes()
             .with_title("Rust GPU - wgpu")
-            .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
+            .with_inner_size(winit::dpi::LogicalSize::new(800.0, 480.0))
             .with_fullscreen(Some(Fullscreen::Borderless(None))),
     )
     .unwrap();
@@ -39,7 +39,7 @@ pub fn run() {
         .create_window(
             Window::default_attributes()
                 .with_title("Rust GPU - wgpu")
-                .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 720.0))
+                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 480.0))
         )
         .unwrap();
 
@@ -251,8 +251,10 @@ async fn run_inner(
                     };
                     let frame = slots::create_program_frame(&mut program_buffers, output, &start, &mut last_time);
 
-                    slot_agents.on_loop(&program_init, &program_buffers, &frame);
-                    slot_diffuse.on_loop(&program_init, &program_buffers, &frame);
+                    for _ in 0..crate::configuration::COMPUTE_STEPS_PER_RENDER {
+                        slot_agents.on_loop(&program_init, &program_buffers, &frame);
+                        slot_diffuse.on_loop(&program_init, &program_buffers, &frame);
+                    }
                     slot_render.on_loop(&program_init, &program_buffers, &frame);
 
                     frame.output.present();

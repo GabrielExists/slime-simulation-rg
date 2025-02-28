@@ -16,7 +16,7 @@ DEFAULT_USER_NAME: Final = "slime"
 DEFAULT_ADDRESS: Final = "raspberryslime.local"
 DEFAULT_TOOLCHAIN: Final = "aarch64-unknown-linux-gnu"
 DEFAULT_APP_NAME: Final = "first-rg-program"
-DEFAULT_TARGET_FOLDER: Final = "/tmp"
+DEFAULT_TARGET_FOLDER: Final = "/home/slime/Desktop"
 DEFAULT_DEBUG_PORT: Final = "17777"
 DEFAULT_GDB_APP = "gdb-multiarch"
 

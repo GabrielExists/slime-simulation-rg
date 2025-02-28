@@ -91,6 +91,7 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
     if delta_time > 1.0 / 50.0 {
         delta_time = 1.0 / 50.0;
     }
+    delta_time = delta_time * configuration::TIME_SCALE;
     // if time > 3.0 {
     //     delta_time = 0.0;
     // }
