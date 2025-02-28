@@ -29,7 +29,11 @@ pub enum SpawnMode {
 //     max_distance: 250.0,
 // };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::EvenlyDistributed;
-pub const SPAWN_MODE: SpawnMode = SpawnMode::CenterFacingOutwards;
+// pub const SPAWN_MODE: SpawnMode = SpawnMode::CenterFacingOutwards;
+// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingInward { distance: 220.0 };
+pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingOutward { distance: 170.0 };
+// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingRandom { distance: 220.0 };
+// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingClockwise { distance: 220.0 };
 pub const TIME_SCALE: f32 = 1.0;
 pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
 pub const NUM_AGENTS: u32 = 10000;
