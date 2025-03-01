@@ -89,6 +89,7 @@ pub struct Agent {
     pub x: f32,
     pub y: f32,
     pub angle: f32,
+    pub channel_index: u32,
 }
 
 pub fn saturate(x: f32) -> f32 {

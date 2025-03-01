@@ -27,24 +27,27 @@ impl Slot for SlotAgents {
     type Buffers = SlotAgentsBuffers;
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
-        // let mut num_agents = 0;
-        // let agent_bytes = configuration::AGENT_STATS.iter().flat_map(|agent_stats: &AgentStatsAll| {
-        //     num_agents += agent_stats.num_agents;
-        //     std::iter::repeat(())
-        //         .take(agent_stats.num_agents)
-        //         .flat_map(|()| {
-        //             let agent = spawn_agent(program_buffers, &agent_stats.spawn_mode);
-        //             bytemuck::bytes_of(&agent).to_vec()
-        //         })
-        // }).collect::<Vec<_>>();
-        let num_agents = configuration::AGENT_STATS[0].num_agents;
-        let agent_bytes = std::iter::repeat(())
-            .take(configuration::AGENT_STATS[0].num_agents)
-            .flat_map(|()| {
-                let agent = spawn_agent(program_buffers, &configuration::AGENT_STATS[0].spawn_mode);
-                bytemuck::bytes_of(&agent).to_vec()
-            })
-            .collect::<Vec<_>>();
+        let mut num_agents = 0;
+        let agent_bytes = configuration::AGENT_STATS
+            .iter()
+            .enumerate()
+            .flat_map(|(channel_index, agent_stats): (usize, &AgentStatsAll)| {
+                num_agents += agent_stats.num_agents;
+                std::iter::repeat(())
+                    .take(agent_stats.num_agents)
+                    .flat_map(move |()| {
+                        let agent = spawn_agent(program_buffers, &agent_stats.spawn_mode, channel_index as u32);
+                        bytemuck::bytes_of(&agent).to_vec()
+                    })
+            }).collect::<Vec<_>>();
+        // let num_agents = configuration::AGENT_STATS[0].num_agents;
+        // let agent_bytes = std::iter::repeat(())
+        //     .take(configuration::AGENT_STATS[0].num_agents)
+        //     .flat_map(|()| {
+        //         let agent = spawn_agent(program_buffers, &configuration::AGENT_STATS[0].spawn_mode, 0);
+        //         bytemuck::bytes_of(&agent).to_vec()
+        //     })
+        //     .collect::<Vec<_>>();
 
         let agents_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Agent buffer"),
@@ -163,7 +166,7 @@ impl Slot for SlotAgents {
     }
 }
 
-fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shared::Agent {
+fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel_index: u32) -> shared::Agent {
     let center_x = program_buffers.width as f32 / 2.0;
     let center_y = program_buffers.height as f32 / 2.0;
     match spawn_mode {
@@ -172,6 +175,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: program_buffers.width as f32 / 2.0,
                 y: program_buffers.height as f32 / 2.0,
                 angle: get_random_angle(),
+                channel_index,
             }
         }
         SpawnMode::PointFacingOutwards { x, y } => {
@@ -179,6 +183,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: *x,
                 y: *y,
                 angle: get_random_angle(),
+                channel_index,
             }
         }
         SpawnMode::CircleFacingInwards { max_distance } => {
@@ -190,6 +195,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: center_x + random_angle.cos() * random_distance,
                 y: center_y + random_angle.sin() * random_distance,
                 angle: std::f32::consts::PI + random_angle,
+                channel_index,
             }
         }
         SpawnMode::EvenlyDistributed => {
@@ -197,6 +203,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: rand::rng().random_range(0..program_buffers.width * 10) as f32 / 10.0,
                 y: rand::rng().random_range(0..program_buffers.height * 10) as f32 / 10.0,
                 angle: get_random_angle(),
+                channel_index,
             }
         }
         SpawnMode::CircumferenceFacingInward { distance } => {
@@ -205,6 +212,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: center_x + random_angle.cos() * distance,
                 y: center_y + random_angle.sin() * distance,
                 angle: std::f32::consts::PI + random_angle,
+                channel_index,
             }
         }
         SpawnMode::CircumferenceFacingOutward { distance } => {
@@ -213,6 +221,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: center_x + random_angle.cos() * distance,
                 y: center_y + random_angle.sin() * distance,
                 angle: random_angle,
+                channel_index,
             }
         }
         SpawnMode::CircumferenceFacingRandom { distance } => {
@@ -221,6 +230,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: center_x + random_angle.cos() * distance,
                 y: center_y + random_angle.sin() * distance,
                 angle: get_random_angle(),
+                channel_index,
             }
         }
         SpawnMode::CircumferenceFacingClockwise { distance } => {
@@ -229,6 +239,7 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode) -> shar
                 x: center_x + random_angle.cos() * distance,
                 y: center_y + random_angle.sin() * distance,
                 angle: std::f32::consts::PI / 2.0 + random_angle,
+                channel_index,
             }
         }
     }

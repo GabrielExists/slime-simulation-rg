@@ -16,7 +16,7 @@ enum Bounds {
     OutsideBounds,
 }
 
-#[spirv(compute(threads(16)))]
+#[spirv(compute(threads(16, 1, 1)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
@@ -25,7 +25,10 @@ pub fn main_cs(
 ) {
     let agent_index = id.x as usize;
     let agent = &mut agents_buffer[agent_index];
-    let agent_stats = &constants.agent_stats[0];
+    if agent.channel_index as usize >= constants.agent_stats.len() {
+        return;
+    }
+    let agent_stats = &constants.agent_stats[agent.channel_index as usize];
     let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
 
     // Sensor based on sensory data
@@ -76,7 +79,7 @@ pub fn main_cs(
         while num_steps > step {
             step_x = step_x + agent.angle.cos() * step;
             step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y));
+            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -87,7 +90,7 @@ pub fn main_cs(
         // Do the last little leap
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
-        let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y));
+        let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
         if let Bounds::OutsideBounds = bounds {
             break 'clamp_block bounds;
         }
@@ -117,7 +120,7 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).x_frac();
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(agent.channel_index as usize);
             }
         }
     }
@@ -129,13 +132,13 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 }
 
 
-fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: &Vec2) -> Bounds {
+fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: &Vec2, channel_index: usize) -> Bounds {
     if is_inside_bounds(position, constants) {
         let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
         let mut pixel = pixel_view(&mut trail_buffer[pixel_index]);
-        let mut value_frac = pixel.x_frac() as f32;
+        let mut value_frac = pixel.get_frac(channel_index) as f32;
         value_frac += agent_stats.pixel_addition;
-        pixel.set_x_frac(f32::min(value_frac, 1.0));
+        pixel.set_frac(channel_index, f32::min(value_frac, 1.0));
         Bounds::InsideBounds
     } else {
         Bounds::OutsideBounds
