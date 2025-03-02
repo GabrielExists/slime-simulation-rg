@@ -13,6 +13,7 @@ pub const DELTA_TIME: f32 = 1.0 / 24.0;
 pub const TIME_SCALE: f32 = 1.0;
 pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
+    // Blue - Xenophilic
     AgentStatsAll {
         spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 170.0 },
         num_agents: 10000,
@@ -26,10 +27,11 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
             avoidance_threshold: 20.0,
             evaporation_speed: 50.0,
             diffusion_speed: 180.0,
-            attraction_one: 1.0,
-            attraction_two: 1.0,
+            attraction_blue: 0.0,
+            attraction_green: 1.0,
         },
     },
+    // Green
     AgentStatsAll {
         spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170.0 },
         num_agents: 10000,
@@ -43,8 +45,8 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
             avoidance_threshold: 10.0,
             evaporation_speed: 50.0,
             diffusion_speed: 180.0,
-            attraction_one: -1.0,
-            attraction_two: 1.0,
+            attraction_blue: -1.0,
+            attraction_green: 1.0,
         },
     },
 ];

@@ -121,8 +121,8 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_one;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_two;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_blue;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_green;
             }
         }
     }

@@ -82,8 +82,8 @@ pub struct AgentStats {
     // Reaching 86% takes 1 second if set to 200%.
     // Reaching 63% takes 1 second if set to 100%.
     pub diffusion_speed: f32,
-    pub attraction_one: f32,
-    pub attraction_two: f32,
+    pub attraction_blue: f32,
+    pub attraction_green: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
