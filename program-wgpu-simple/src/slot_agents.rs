@@ -152,7 +152,7 @@ impl Slot for SlotAgents {
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
             );
-            cpass.dispatch_workgroups(self.init.num_agents.div_ceil(256) as u32, 1, 1);
+            cpass.dispatch_workgroups(self.init.num_agents.div_ceil(16) as u32, 1, 1);
         }
 
         encoder.copy_buffer_to_buffer(

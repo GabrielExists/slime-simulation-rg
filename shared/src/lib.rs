@@ -241,3 +241,52 @@ pub fn frac_from_int(value: u32) -> f32 {
 pub fn int_from_frac(value: f32) -> u32 {
     (value * PIXEL_MAX as f32) as u32
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn test_set() {
+        let mut a = 0x12345678;
+        pixel_view(&mut a).set_x(0xAB);
+        assert_eq!(a, 0xAB345678);
+        pixel_view(&mut a).set_y(0xCD);
+        assert_eq!(a, 0xABCD5678);
+        pixel_view(&mut a).set_z(0xEF);
+        assert_eq!(a, 0xABCDEF78);
+        pixel_view(&mut a).set_w(0xBD);
+        assert_eq!(a, 0xABCDEFBD);
+    }
+    #[test]
+    fn test_get() {
+        let mut a = 0x12345678;
+        let view = pixel_view(&mut a);
+        assert_eq!(view.x(), 0x12);
+        assert_eq!(view.y(), 0x34);
+        assert_eq!(view.z(), 0x56);
+        assert_eq!(view.w(), 0x78);
+    }
+
+    #[test]
+    fn test_set_index() {
+        let mut a = 0x12345678;
+        pixel_view(&mut a).set(0, 0xAB);
+        assert_eq!(a, 0xAB345678);
+        pixel_view(&mut a).set(1, 0xCD);
+        assert_eq!(a, 0xABCD5678);
+        pixel_view(&mut a).set(2, 0xEF);
+        assert_eq!(a, 0xABCDEF78);
+        pixel_view(&mut a).set(3, 0xBD);
+        assert_eq!(a, 0xABCDEFBD);
+    }
+    #[test]
+    fn test_get_index() {
+        let mut a = 0x12345678;
+        let view = pixel_view(&mut a);
+        assert_eq!(view.get(0), 0x12);
+        assert_eq!(view.get(1), 0x34);
+        assert_eq!(view.get(2), 0x56);
+        assert_eq!(view.get(3), 0x78);
+    }
+}

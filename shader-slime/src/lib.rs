@@ -16,7 +16,7 @@ enum Bounds {
     OutsideBounds,
 }
 
-#[spirv(compute(threads(256, 1, 1)))]
+#[spirv(compute(threads(16, 1, 1)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,

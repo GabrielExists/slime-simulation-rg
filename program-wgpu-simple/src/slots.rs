@@ -1,4 +1,6 @@
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
+use configuration::{DELTA_TIME, TIME_SCALE};
 use wgpu::util::DeviceExt;
 use crate::configuration;
 use shared::ShaderConstants;
@@ -86,12 +88,16 @@ pub fn create_buffers(program_init: &ProgramInit, size: winit::dpi::PhysicalSize
 
 pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::SurfaceTexture, start: &Instant, last_time: &mut Instant) -> Frame {
     let time = start.elapsed().as_secs_f32();
-    let mut delta_time = last_time.elapsed().as_secs_f32();
-    // If we're slow enough, instead slow down the simulation
-    if delta_time > 1.0 / 50.0 {
-        delta_time = 1.0 / 50.0;
+    let delta_time = last_time.elapsed().as_secs_f32();
+    if delta_time < DELTA_TIME {
+        thread::sleep(Duration::from_secs_f32(DELTA_TIME - delta_time));
     }
-    delta_time = delta_time * configuration::TIME_SCALE;
+    // If we're slow enough, instead slow down the simulation
+    // let max_delta_time = 1.0 / 50.0;
+    // if delta_time > max_delta_time {
+    //     delta_time = max_delta_time;
+    // }
+    // let mut delta_time = 1.0 / 18.0;
     // if time > 3.0 {
     //     delta_time = 0.0;
     // }
@@ -100,7 +106,7 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
         width: program_buffers.width,
         height: program_buffers.height,
         time,
-        delta_time,
+        delta_time: DELTA_TIME * TIME_SCALE,
         agent_stats: configuration::AGENT_STATS.map(|stats_all| stats_all.shader_stats),
     };
     let frame = Frame {
