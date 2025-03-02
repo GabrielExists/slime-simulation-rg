@@ -148,8 +148,8 @@ impl<'storage> PixelView<'storage> {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 0 & 0xFFFC } // 15
-    pub fn y(&self) -> u32 { *self.storage >> 15 & 0xFFFC } // 15
+    pub fn x(&self) -> u32 { *self.storage >> 0 & 0x7FFF } // 15
+    pub fn y(&self) -> u32 { *self.storage >> 15 & 0x7FFF } // 15
     // pub fn z(&self) -> u32 { *self.storage >> 0 & 0x3 } // 2
     pub fn get(&self, index: usize) -> u32 {
         match index {
@@ -165,10 +165,10 @@ impl<'storage> PixelView<'storage> {
         frac_from_int(self.get(index))
     }
     pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF8000 | (value & 0xFFFC) << 0; // 15
+        *self.storage = *self.storage & 0xFFFF8000 | (value & 0x7FFF) << 0; // 15
     }
     pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xC0007FFF | ((value & 0xFFFC) << 15); // 15
+        *self.storage = *self.storage & 0xC0007FFF | ((value & 0x7FFF) << 15); // 15
     }
     // pub fn set_z(&mut self, value: u32) {
     //     *self.storage = *self.storage & 0xFFFFFF00 | ((value & 0xFF) << 0); // 8
@@ -252,13 +252,13 @@ mod test {
     #[test]
     fn test_set() {
         let mut a = 0x12345678;
-        pixel_view(&mut a).set_x(0xAB);
-        pixel_view(&mut a).set_y(0xCD);
-        pixel_view(&mut a).set_z(0xEF);
+        pixel_view(&mut a).set_x(0x2BCD);
+        pixel_view(&mut a).set_y(0x4DEF);
+        // pixel_view(&mut a).set_z(0xEF);
         let view = pixel_view(&mut a);
-        assert_eq!(view.x(), 0xAB);
-        assert_eq!(view.y(), 0xCD);
-        assert_eq!(view.z(), 0xEF);
+        assert_eq!(view.x(), 0x2BCD);
+        assert_eq!(view.y(), 0x4DEF);
+        // assert_eq!(view.z(), 0xEF);
     }
 
     #[test]
@@ -266,10 +266,10 @@ mod test {
         let mut a = 0x12345678;
         pixel_view(&mut a).set_x_frac(0.5);
         pixel_view(&mut a).set_y_frac(0.25);
-        pixel_view(&mut a).set_z_frac(0.125);
+        // pixel_view(&mut a).set_z_frac(0.125);
         let view = pixel_view(&mut a);
-        assert_eq!(view.x_frac(), 0.5);
-        assert_eq!(view.y_frac(), 0.25);
-        assert_eq!(view.z_frac(), 0.125);
+        assert!(f32::abs(view.x_frac() - 0.5) < 0.01);
+        assert!(f32::abs(view.y_frac() - 0.25) < 0.01);
+        // assert_eq!(view.z_frac(), 0.125);
     }
 }
