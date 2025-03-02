@@ -56,18 +56,17 @@ pub fn main_cs(
         }
         (Some(weight_left), Some(weight_forward), Some(weight_right)) => {
             // If center is stronger than edges, continue forward
-            if weight_forward > weight_left &&weight_forward > weight_right {
+            if weight_forward > weight_left && weight_forward > weight_right {
                 agent.angle += 0.0;
             }
             // If edges are stronger than center, pick a direction randomly
-            else if weight_left > weight_forward &&weight_right > weight_forward {
+            else if weight_left > weight_forward && weight_right > weight_forward {
                 agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
             }
             // If there's a gradient in one direction, turn that way
             else if weight_right > weight_left {
                 agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
-            }
-            else if weight_left > weight_right {
+            } else if weight_left > weight_right {
                 agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
             }
         }
@@ -107,7 +106,6 @@ pub fn main_cs(
 
     agent.x = step_x;
     agent.y = step_y;
-
 }
 
 fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
@@ -123,7 +121,8 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(agent.channel_index as usize);
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_one;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_two;
             }
         }
     }
@@ -182,7 +181,7 @@ pub fn diffuse_cs(
     let diffused_value = lerp(
         pixel_view(&mut trail_buffer[index]).get_frac(channel_index),
         blur_result,
-        (diffusion_speed / 100.0) * constants.delta_time
+        (diffusion_speed / 100.0) * constants.delta_time,
     );
 
     let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
@@ -204,7 +203,7 @@ pub fn main_fs(
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
 
     let pixel = pixel_view(&mut trail_buffer[index]);
-    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
+    *output = vec4(0.0, pixel.y_frac(), pixel.x_frac(), 1.0)
 }
 
 #[spirv(vertex)]

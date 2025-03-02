@@ -48,7 +48,7 @@ pub struct ShaderConstants {
     pub height: u32,
     pub time: f32,
     pub delta_time: f32,
-    pub agent_stats: [AgentStats; 3],
+    pub agent_stats: [AgentStats; NUM_AGENT_TYPES],
 }
 
 #[derive(Copy, Clone)]
@@ -58,6 +58,7 @@ pub struct AgentStatsAll {
     pub shader_stats: AgentStats,
 }
 
+pub const NUM_AGENT_TYPES: usize = 2;
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
@@ -81,6 +82,8 @@ pub struct AgentStats {
     // Reaching 86% takes 1 second if set to 200%.
     // Reaching 63% takes 1 second if set to 100%.
     pub diffusion_speed: f32,
+    pub attraction_one: f32,
+    pub attraction_two: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -138,43 +141,29 @@ impl<'storage> PixelView<'storage> {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 24 }
-    pub fn y(&self) -> u32 { (*self.storage >> 16) & 0xFF }
-    pub fn z(&self) -> u32 { (*self.storage >> 8) & 0xFF }
-    pub fn w(&self) -> u32 { *self.storage & 0xFF }
+    pub fn x(&self) -> u32 { *self.storage >> 16 }
+    pub fn y(&self) -> u32 { *self.storage  & 0xFFFF }
     pub fn get(&self, index: usize) -> u32 {
         match index {
             0 => self.x(),
-            1 => self.y(),
-            2 => self.z(),
-            _ => self.w(),
+            _ => self.y(),
         }
     }
     pub fn x_frac(&self) -> f32 { frac_from_int(self.x()) }
     pub fn y_frac(&self) -> f32 { frac_from_int(self.y()) }
-    pub fn z_frac(&self) -> f32 { frac_from_int(self.z()) }
-    pub fn w_frac(&self) -> f32 { frac_from_int(self.w()) }
     pub fn get_frac(&self, index: usize) -> f32 {
         frac_from_int(self.get(index))
     }
     pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0x00FFFFFF | value << 24;
+        *self.storage = *self.storage & 0x0000FFFF | value << 16;
     }
     pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFF00FFFF | (value & 0xFF) << 16;
-    }
-    pub fn set_z(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
-    }
-    pub fn set_w(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
+        *self.storage = *self.storage & 0xFFFF0000 | (value & 0xFFFF);
     }
     pub fn set(&mut self, index: usize, value: u32) {
         match index {
             0 => self.set_x(value),
-            1 => self.set_y(value),
-            2 => self.set_z(value),
-            _ => self.set_w(value),
+            _ => self.set_y(value),
         }
     }
     pub fn set_x_frac(&mut self, value: f32) {
@@ -183,18 +172,10 @@ impl<'storage> PixelView<'storage> {
     pub fn set_y_frac(&mut self, value: f32) {
         self.set_y(int_from_frac(value))
     }
-    pub fn set_z_frac(&mut self, value: f32) {
-        self.set_z(int_from_frac(value))
-    }
-    pub fn set_w_frac(&mut self, value: f32) {
-        self.set_w(int_from_frac(value))
-    }
     pub fn set_frac(&mut self, index: usize, value: f32) {
         match index {
             0 => self.set_x_frac(value),
-            1 => self.set_y_frac(value),
-            2 => self.set_z_frac(value),
-            _ => self.set_w_frac(value),
+            _ => self.set_y_frac(value),
         }
     }
 }
@@ -232,7 +213,7 @@ impl<'storage> PixelView<'storage> {
 // }
 
 
-pub const PIXEL_MAX: u32 = 255;
+pub const PIXEL_MAX: u32 = 65535;
 
 pub fn frac_from_int(value: u32) -> f32 {
     value as f32 / PIXEL_MAX as f32
