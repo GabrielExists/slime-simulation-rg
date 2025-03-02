@@ -1,5 +1,7 @@
+use crate::configuration;
 use shared::ShaderConstants;
 use crate::slots::*;
+use wgpu::util::DeviceExt;
 
 const CS_ENTRY_POINT: &str = "diffuse_cs";
 
@@ -11,6 +13,7 @@ pub struct SlotDiffuse {
 pub struct SlotDiffuseInit {
     pub pipeline: wgpu::ComputePipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
+    pub trail_stats_buffer: wgpu::Buffer,
 }
 
 pub struct SlotDiffuseBuffers {
@@ -22,11 +25,32 @@ impl Slot for SlotDiffuse {
     type Buffers = SlotDiffuseBuffers;
 
     fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+        let trail_stats_bytes = configuration::TRAIL_STATS.iter().flat_map(|trail_stats|
+            bytemuck::bytes_of(trail_stats).to_vec()
+        ).collect::<Vec<_>>();
+        let trail_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Trail buffer"),
+            contents: &trail_stats_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
+
         let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
+                    count: None,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
                     count: None,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
@@ -60,6 +84,7 @@ impl Slot for SlotDiffuse {
         let init = SlotDiffuseInit {
             pipeline,
             bind_group_layout,
+            trail_stats_buffer,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
         Self {
@@ -75,6 +100,10 @@ impl Slot for SlotDiffuse {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
+                    resource: init.trail_stats_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
                     resource: program_buffers.trail_buffer.as_entire_binding(),
                 }
             ],

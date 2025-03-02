@@ -92,22 +92,12 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
     if delta_time < DELTA_TIME {
         thread::sleep(Duration::from_secs_f32(DELTA_TIME - delta_time));
     }
-    // If we're slow enough, instead slow down the simulation
-    // let max_delta_time = 1.0 / 50.0;
-    // if delta_time > max_delta_time {
-    //     delta_time = max_delta_time;
-    // }
-    // let mut delta_time = 1.0 / 18.0;
-    // if time > 3.0 {
-    //     delta_time = 0.0;
-    // }
     *last_time = std::time::Instant::now();
     let push_constants = ShaderConstants {
         width: program_buffers.width,
         height: program_buffers.height,
         time,
         delta_time: DELTA_TIME * TIME_SCALE,
-        agent_stats: configuration::AGENT_STATS.map(|stats_all| stats_all.shader_stats),
     };
     let frame = Frame {
         output,

@@ -15,6 +15,7 @@ pub struct SlotAgentsInit {
     pub pipeline: wgpu::ComputePipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub agents_buffer: wgpu::Buffer,
+    pub agent_stats_buffer: wgpu::Buffer,
     pub num_agents: usize,
 }
 
@@ -48,6 +49,16 @@ impl Slot for SlotAgents {
         //         bytemuck::bytes_of(&agent).to_vec()
         //     })
         //     .collect::<Vec<_>>();
+        let agent_stats_bytes = configuration::AGENT_STATS.iter().flat_map(|stats_all|
+            bytemuck::bytes_of(&stats_all.shader_stats).to_vec()
+        ).collect::<Vec<_>>();
+        let agent_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Agent buffer"),
+            contents: &agent_stats_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
 
         let agents_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Agent buffer"),
@@ -71,6 +82,16 @@ impl Slot for SlotAgents {
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
+                    count: None,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
                     count: None,
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
@@ -105,6 +126,7 @@ impl Slot for SlotAgents {
             pipeline,
             bind_group_layout,
             agents_buffer,
+            agent_stats_buffer,
             num_agents,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
@@ -125,6 +147,10 @@ impl Slot for SlotAgents {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
+                    resource: init.agent_stats_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
                     resource: program_buffers.trail_buffer.as_entire_binding(),
                 },
             ],

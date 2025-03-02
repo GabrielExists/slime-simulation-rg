@@ -48,7 +48,6 @@ pub struct ShaderConstants {
     pub height: u32,
     pub time: f32,
     pub delta_time: f32,
-    pub agent_stats: [AgentStats; NUM_AGENT_TYPES],
 }
 
 #[derive(Copy, Clone)]
@@ -58,7 +57,7 @@ pub struct AgentStatsAll {
     pub shader_stats: AgentStats,
 }
 
-pub const NUM_AGENT_TYPES: usize = 2;
+pub const NUM_AGENT_TYPES: usize = 3;
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
@@ -73,6 +72,15 @@ pub struct AgentStats {
     // Minimum value is 0.0
     // Setting a value over 9 effectively disables avoidance of saturated trails
     pub avoidance_threshold: f32,
+    pub attraction_red: f32,
+    pub attraction_green: f32,
+    pub attraction_blue: f32,
+}
+
+pub const NUM_TRAIL_STATS: usize = 3;
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct TrailStats {
     // Percent of full white to black transition per second.
     // 100.0 is completely faded after 1 second.
     // 50.0 is completely faded after 2 seconds.
@@ -82,8 +90,6 @@ pub struct AgentStats {
     // Reaching 86% takes 1 second if set to 200%.
     // Reaching 63% takes 1 second if set to 100%.
     pub diffusion_speed: f32,
-    pub attraction_blue: f32,
-    pub attraction_green: f32,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -141,41 +147,52 @@ impl<'storage> PixelView<'storage> {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 16 }
-    pub fn y(&self) -> u32 { *self.storage  & 0xFFFF }
+    pub fn x(&self) -> u32 { *self.storage >> 21 } // 11
+    pub fn y(&self) -> u32 { *self.storage >> 10 & 0x7FF } // 11
+    pub fn z(&self) -> u32 { *self.storage & 0x3FF } // 10
     pub fn get(&self, index: usize) -> u32 {
         match index {
             0 => self.x(),
-            _ => self.y(),
+            1 => self.y(),
+            _ => self.z(),
         }
     }
-    pub fn x_frac(&self) -> f32 { frac_from_int(self.x()) }
-    pub fn y_frac(&self) -> f32 { frac_from_int(self.y()) }
+    pub fn x_frac(&self) -> f32 { self.x() as f32 / 2u32.pow(10) as f32 }
+    pub fn y_frac(&self) -> f32 { self.y() as f32 / 2u32.pow(10) as f32 }
+    pub fn z_frac(&self) -> f32 { self.z() as f32 / 2u32.pow(10) as f32 }
     pub fn get_frac(&self, index: usize) -> f32 {
         frac_from_int(self.get(index))
     }
     pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0x0000FFFF | value << 16;
+        *self.storage = *self.storage & 0x001FFFFF | value << 21; // 11
     }
     pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF0000 | (value & 0xFFFF);
+        *self.storage = *self.storage & 0xFFE003FF | ((value & 0x7FF) << 10); // 11
+    }
+    pub fn set_z(&mut self, value: u32) {
+        *self.storage = *self.storage & 0xFFFFFC00 | (value & 0x3FF); // 10
     }
     pub fn set(&mut self, index: usize, value: u32) {
         match index {
             0 => self.set_x(value),
-            _ => self.set_y(value),
+            1 => self.set_y(value),
+            _ => self.set_z(value),
         }
     }
     pub fn set_x_frac(&mut self, value: f32) {
-        self.set_x(int_from_frac(value))
+        self.set_x((value * 2u32.pow(10) as f32) as u32)
     }
     pub fn set_y_frac(&mut self, value: f32) {
-        self.set_y(int_from_frac(value))
+        self.set_y((value * 2u32.pow(10) as f32) as u32)
+    }
+    pub fn set_z_frac(&mut self, value: f32) {
+        self.set_z((value * 2u32.pow(10) as f32) as u32)
     }
     pub fn set_frac(&mut self, index: usize, value: f32) {
         match index {
             0 => self.set_x_frac(value),
-            _ => self.set_y_frac(value),
+            1 => self.set_y_frac(value),
+            _ => self.set_z_frac(value),
         }
     }
 }
@@ -213,7 +230,7 @@ impl<'storage> PixelView<'storage> {
 // }
 
 
-pub const PIXEL_MAX: u32 = 65535;
+pub const PIXEL_MAX: u32 = 2u32.pow(10);
 
 pub fn frac_from_int(value: u32) -> f32 {
     value as f32 / PIXEL_MAX as f32
@@ -222,7 +239,6 @@ pub fn frac_from_int(value: u32) -> f32 {
 pub fn int_from_frac(value: f32) -> u32 {
     (value * PIXEL_MAX as f32) as u32
 }
-
 #[cfg(test)]
 mod test {
     use crate::*;
@@ -231,43 +247,23 @@ mod test {
     fn test_set() {
         let mut a = 0x12345678;
         pixel_view(&mut a).set_x(0xAB);
-        assert_eq!(a, 0xAB345678);
         pixel_view(&mut a).set_y(0xCD);
-        assert_eq!(a, 0xABCD5678);
         pixel_view(&mut a).set_z(0xEF);
-        assert_eq!(a, 0xABCDEF78);
-        pixel_view(&mut a).set_w(0xBD);
-        assert_eq!(a, 0xABCDEFBD);
+        let view = pixel_view(&mut a);
+        assert_eq!(view.x(), 0xAB);
+        assert_eq!(view.y(), 0xCD);
+        assert_eq!(view.z(), 0xEF);
     }
     #[test]
-    fn test_get() {
+    fn test_set_frac() {
         let mut a = 0x12345678;
+        pixel_view(&mut a).set_x_frac(0.5);
+        pixel_view(&mut a).set_y_frac(0.25);
+        pixel_view(&mut a).set_z_frac(0.125);
         let view = pixel_view(&mut a);
-        assert_eq!(view.x(), 0x12);
-        assert_eq!(view.y(), 0x34);
-        assert_eq!(view.z(), 0x56);
-        assert_eq!(view.w(), 0x78);
+        assert_eq!(view.x_frac(), 0.5);
+        assert_eq!(view.y_frac(), 0.25);
+        assert_eq!(view.z_frac(), 0.125);
     }
 
-    #[test]
-    fn test_set_index() {
-        let mut a = 0x12345678;
-        pixel_view(&mut a).set(0, 0xAB);
-        assert_eq!(a, 0xAB345678);
-        pixel_view(&mut a).set(1, 0xCD);
-        assert_eq!(a, 0xABCD5678);
-        pixel_view(&mut a).set(2, 0xEF);
-        assert_eq!(a, 0xABCDEF78);
-        pixel_view(&mut a).set(3, 0xBD);
-        assert_eq!(a, 0xABCDEFBD);
-    }
-    #[test]
-    fn test_get_index() {
-        let mut a = 0x12345678;
-        let view = pixel_view(&mut a);
-        assert_eq!(view.get(0), 0x12);
-        assert_eq!(view.get(1), 0x34);
-        assert_eq!(view.get(2), 0x56);
-        assert_eq!(view.get(3), 0x78);
-    }
 }

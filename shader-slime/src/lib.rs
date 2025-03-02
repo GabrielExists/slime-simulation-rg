@@ -21,17 +21,18 @@ pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] agents_buffer: &mut [Agent],
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] agent_stats_buffer: &[AgentStats],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] trail_buffer: &mut [u32],
 ) {
     let agent_index = id.x as usize + id.y as usize * 256 + id.z as usize * 256 * 256;
     if agent_index >= agents_buffer.len() {
         return;
     }
     let agent = &mut agents_buffer[agent_index];
-    if agent.channel_index as usize >= constants.agent_stats.len() {
+    if agent.channel_index as usize >= NUM_AGENT_TYPES {
         return;
     }
-    let agent_stats = &constants.agent_stats[agent.channel_index as usize];
+    let agent_stats = &agent_stats_buffer[agent.channel_index as usize];
     let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
 
     // Sensor based on sensory data
@@ -121,8 +122,9 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_blue;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_red;
                 sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_green;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(2) * agent_stats.attraction_blue;
             }
         }
     }
@@ -156,15 +158,16 @@ fn is_inside_bounds(position: &Vec2, constants: &ShaderConstants) -> bool {
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_stats: &[TrailStats],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
 ) {
     let index = id.y as usize * constants.width as usize + id.x as usize;
     let channel_index = id.z as usize;
-    if channel_index >= constants.agent_stats.len() {
+    if channel_index >= NUM_AGENT_TYPES {
         return;
     }
-    let diffusion_speed = constants.agent_stats[channel_index].diffusion_speed;
-    let evaporation_speed = constants.agent_stats[channel_index].evaporation_speed;
+    let diffusion_speed = trail_stats[channel_index].diffusion_speed;
+    let evaporation_speed = trail_stats[channel_index].evaporation_speed;
 
     let mut sum = 0.0;
     for offset_x in -1..=1 {
@@ -203,7 +206,7 @@ pub fn main_fs(
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
 
     let pixel = pixel_view(&mut trail_buffer[index]);
-    *output = vec4(0.0, pixel.y_frac(), pixel.x_frac(), 1.0)
+    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
 }
 
 #[spirv(vertex)]
