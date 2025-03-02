@@ -91,13 +91,19 @@ pub fn main_cs(
         // If we didn't go outside the window, which is the normal case,
         // num_steps is now smaller than 1.0
         // Do the last little leap
+        let previous_x = step_x;
+        let previous_y = step_y;
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
-        let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
-        if let Bounds::OutsideBounds = bounds {
+        if previous_x as i32 != step_x as i32 || previous_y as i32 != step_y as i32 {
+            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
             break 'clamp_block bounds;
         }
-        break 'clamp_block Bounds::InsideBounds;
+        break 'clamp_block if is_inside_bounds(&vec2(step_x, step_y), constants) {
+            Bounds::InsideBounds
+        } else {
+            Bounds::OutsideBounds
+        }
     };
     if let Bounds::OutsideBounds = bounds {
         step_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, step_x));
@@ -122,9 +128,8 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 
             if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
                 let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_red;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_green;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(2) * agent_stats.attraction_blue;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_channel_one;
+                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_channel_two;
             }
         }
     }
@@ -206,7 +211,7 @@ pub fn main_fs(
     let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
 
     let pixel = pixel_view(&mut trail_buffer[index]);
-    *output = vec4(pixel.x_frac(), pixel.y_frac(), pixel.z_frac(), 1.0)
+    *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
 }
 
 #[spirv(vertex)]
