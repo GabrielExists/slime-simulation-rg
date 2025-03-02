@@ -2,6 +2,27 @@
 members = [
     "first-rg-program",
     "first-rg-shader",
+    "builder",
 ]
+default-members = [
+    "first-rg-program",
+]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+authors = ["GabrielExists <gabriel.exists.concurrently@gmail.com>"]
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_arch, values("spirv"))'] }
+
+[workspace.dependencies]
+spirv-builder = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+spirv-std = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+
+[profile.release.build-override]
+opt-level = 3
+codegen-units = 16
+[profile.dev.build-override]
+opt-level = 3

@@ -6,7 +6,10 @@ use wgpu::util::DeviceExt;
 pub fn start() {
     env_logger::init();
 
-    let compiled_shader_modules = maybe_watch(None);
+    let compiled_shader_modules = maybe_watch(
+        #[cfg(feature = "hot-reload")]
+        None
+    );
 
     futures::executor::block_on(start_internal(compiled_shader_modules));
 }

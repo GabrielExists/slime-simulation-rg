@@ -8,6 +8,6 @@ edition = "2024"
 crate-type = ["dylib"]
 
 [dependencies]
-spirv-std = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+spirv-std = { workspace = true }
 
 bytemuck = { version = "1.18.0", features = ["derive"] }

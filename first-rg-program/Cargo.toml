@@ -13,18 +13,12 @@ futures = { version = "0.3", default-features = false, features = ["std", "execu
 env_logger = "0.11.0"
 
 cfg-if = "1.0.0"
-spirv-builder = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421", features = ["watch"] }
-spirv-std = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+spirv-builder = { optional = true, workspace = true, features = ["watch"] }
+spirv-std = { workspace = true }
 strum = { version = "0.26.0", default-features = false, features = ["std", "derive"] }
 
-#[build-dependencies]
-#spirv-builder = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+[build-dependencies]
+spirv-builder = { workspace = true }
 
 [features]
-hot-reload = []
-
-[profile.release.build-override]
-opt-level = 3
-codegen-units = 16
-[profile.dev.build-override]
-opt-level = 3
+hot-reload = ["spirv-builder"]

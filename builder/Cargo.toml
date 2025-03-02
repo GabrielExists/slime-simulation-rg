@@ -1,11 +1,11 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "example-runner-wgpu-builder"
 version = "0.0.0"
 publish = false
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
-repository.workspace = true
 
 # See rustc_codegen_spirv/Cargo.toml for details on these features
 [features]
