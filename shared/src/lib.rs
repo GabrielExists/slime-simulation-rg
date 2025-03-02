@@ -150,10 +150,10 @@ impl<'storage> PixelView<'storage> {
             _ => self.w(),
         }
     }
-    pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
-    pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
-    pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
-    pub fn w_frac(&self) -> f32 { self.w() as f32 / 255.0 }
+    pub fn x_frac(&self) -> f32 { frac_from_int(self.x()) }
+    pub fn y_frac(&self) -> f32 { frac_from_int(self.y()) }
+    pub fn z_frac(&self) -> f32 { frac_from_int(self.z()) }
+    pub fn w_frac(&self) -> f32 { frac_from_int(self.w()) }
     pub fn get_frac(&self, index: usize) -> f32 {
         frac_from_int(self.get(index))
     }
