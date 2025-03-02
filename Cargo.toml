@@ -3,6 +3,7 @@ members = [
     "program-wgpu-simple",
     "shader-slime",
     "shared",
+    "builder",
 ]
 default-members = [
     "program-wgpu-simple",

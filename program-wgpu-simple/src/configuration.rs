@@ -33,7 +33,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     // Blue
     AgentStatsAll {
         spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 160.0 },
-        num_agents: 40000,
+        num_agents: 90000,
         shader_stats: AgentStats {
             velocity: 65.0,
             turn_speed: PI * 80.0,
@@ -41,7 +41,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
             sensor_angle_spacing: PI / 3.0,
             sensor_offset: 10.0,
             pixel_addition: 1.0 / 50.0,
-            avoidance_threshold: 10.0,
+            avoidance_threshold: 20.0,
             attraction_channel_one: 1.0,
             attraction_channel_two: 0.2,
         },
