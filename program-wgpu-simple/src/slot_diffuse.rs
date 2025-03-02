@@ -1,6 +1,6 @@
 use crate::configuration;
 use shared::ShaderConstants;
-use crate::slots::*;
+use crate::program::*;
 use wgpu::util::DeviceExt;
 
 const CS_ENTRY_POINT: &str = "diffuse_cs";

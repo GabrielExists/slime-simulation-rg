@@ -1,5 +1,5 @@
 use crate::slot_diffuse::SlotDiffuse;
-use crate::slots;
+use crate::program;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -9,8 +9,8 @@ use winit::{
 use winit::window::Fullscreen;
 use crate::slot_agents::SlotAgents;
 use crate::slot_render::SlotRender;
-use slots::ProgramInit;
-use slots::Slot;
+use program::ProgramInit;
+use program::Slot;
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -20,6 +20,13 @@ fn _print_type_name<T>(_: T) {
 pub fn run() {
     let mut event_loop_builder = EventLoop::with_user_event();
     let event_loop = event_loop_builder.build().unwrap();
+
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    let mut app = crate::app::App::new();
+
+    event_loop.run_app(&mut app).expect("Failed to run app");
+    /*
 
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
@@ -163,7 +170,7 @@ async fn run_inner(
         queue,
     };
 
-    let mut program_buffers = slots::create_buffers(&program_init, window.inner_size());
+    let mut program_buffers = program::create_buffers(&program_init, window.inner_size());
 
     let mut slot_agents = SlotAgents::create(&program_init, &program_buffers);
     let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers);
@@ -219,7 +226,7 @@ async fn run_inner(
                         surface_config.width = size.width;
                         surface_config.height = size.height;
                         surface.configure(&program_init.device, surface_config);
-                        program_buffers = slots::create_buffers(&program_init, size);
+                        program_buffers = program::create_buffers(&program_init, size);
                         slot_agents.recreate_buffers(&program_init, &program_buffers);
                         slot_diffuse.recreate_buffers(&program_init, &program_buffers);
                         slot_render.recreate_buffers(&program_init, &program_buffers);
@@ -249,7 +256,7 @@ async fn run_inner(
                             return;
                         }
                     };
-                    let frame = slots::create_program_frame(&mut program_buffers, output, &start, &mut last_time);
+                    let frame = program::create_program_frame(&mut program_buffers, output, &start, &mut last_time);
 
                     for _ in 0..crate::configuration::COMPUTE_STEPS_PER_RENDER {
                         slot_agents.on_loop(&program_init, &program_buffers, &frame);
@@ -278,6 +285,8 @@ async fn run_inner(
             _ => {}
         }
     }).unwrap();
+
+     */
 }
 
 // fn create_pipeline(

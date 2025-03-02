@@ -1,5 +1,5 @@
 use shared::ShaderConstants;
-use crate::slots::*;
+use crate::program::*;
 
 const VS_ENTRY_POINT: &'static str = "main_vs";
 const FS_ENTRY_POINT: &'static str = "main_fs";

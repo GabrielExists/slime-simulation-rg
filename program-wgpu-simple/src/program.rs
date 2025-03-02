@@ -10,17 +10,6 @@ use shared::ShaderConstants;
 /// and by making the collection a trait we can collect them easily iterate over them
 /// or disable one
 
-pub trait Slot {
-    // Data that is created during init
-    type Init;
-    // Data that is regenerated when the window resizes
-    type Buffers;
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self;
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers);
-    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame);
-}
-
 // Data that is created at program init
 pub struct ProgramInit {
     pub device: wgpu::Device,
@@ -106,3 +95,13 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
     frame
 }
 
+pub trait Slot {
+    // Data that is created during init
+    type Init;
+    // Data that is regenerated when the window resizes
+    type Buffers;
+    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self;
+    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
+    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers);
+    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame);
+}

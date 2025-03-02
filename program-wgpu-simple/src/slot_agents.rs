@@ -1,6 +1,6 @@
 use rand::Rng;
 use shared::{AgentStatsAll, ShaderConstants, SpawnMode};
-use crate::slots::*;
+use crate::program::*;
 use wgpu::util::DeviceExt;
 use crate::configuration;
 
