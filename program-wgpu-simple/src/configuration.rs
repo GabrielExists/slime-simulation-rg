@@ -15,7 +15,7 @@ pub const NUM_AGENT_TYPES: usize = 3;
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
         spawn_mode: SpawnMode::EvenlyDistributed,
-        num_agents: 10000,
+        num_agents: 1_000_000,
         shader_stats: AgentStats {
             velocity: 65.0,
             turn_speed: PI * 80.0,
@@ -30,14 +30,14 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 170.0 },
-        num_agents: 100000,
+        num_agents: 7_000_000,
         shader_stats: AgentStats {
             velocity: 60.0,
             turn_speed: PI * 50.0,
             turn_speed_avoidance: PI * 50.0,
             sensor_angle_spacing: PI / 3.0,
             sensor_offset: 3.0,
-            pixel_addition: 1.0 / 25.0,
+            pixel_addition: 1.0 / 100.0,
             avoidance_threshold: 3.0,
             evaporation_speed: 50.0,
             diffusion_speed: 180.0,

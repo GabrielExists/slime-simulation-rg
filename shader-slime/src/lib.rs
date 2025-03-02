@@ -16,14 +16,17 @@ enum Bounds {
     OutsideBounds,
 }
 
-#[spirv(compute(threads(16, 1, 1)))]
+#[spirv(compute(threads(256, 1, 1)))]
 pub fn main_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] agents_buffer: &mut [Agent],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
 ) {
-    let agent_index = id.x as usize;
+    let agent_index = id.x as usize + id.y as usize * 256 + id.z as usize * 256 * 256;
+    if agent_index >= agents_buffer.len() {
+        return;
+    }
     let agent = &mut agents_buffer[agent_index];
     if agent.channel_index as usize >= constants.agent_stats.len() {
         return;
