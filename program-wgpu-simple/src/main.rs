@@ -75,14 +75,8 @@ mod slot_render;
 mod slot_agents;
 mod slot_diffuse;
 mod configuration;
-mod egui_tools;
-mod egui_app;
 mod slot_egui;
 
-// const SHADER: &[u8] = include_bytes!(env!("shader_sky.spv"));
-
 fn main() {
-    // println!("{}", env!("OUT_DIR"));
     window::run();
-
 }

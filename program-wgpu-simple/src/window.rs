@@ -303,23 +303,3 @@ async fn run_inner(
      // */
 }
 
-// fn create_pipeline(
-//     device: &wgpu::Device,
-//     surface_format: wgpu::TextureFormat,
-// ) -> (wgpu::PipelineLayout, wgpu::PipelineLayout, wgpu::ComputePipeline, wgpu::RenderPipeline, wgpu::BindGroupLayout, wgpu::BindGroupLayout) {
-//     let create_module = |module| {
-//         let wgpu::ShaderModuleDescriptorSpirV { label, source } = module;
-//         device.create_shader_module(wgpu::ShaderModuleDescriptor {
-//             label,
-//             source: wgpu::ShaderSource::SpirV(source),
-//         })
-//     };
-//
-//     // Merged
-//     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
-//     let module = &create_module(module_raw);
-//
-//
-//     (compute_pipeline_layout, render_pipeline_layout, compute_pipeline, render_pipeline, compute_bind_group_layout, render_bind_group_layout)
-// }
-//
