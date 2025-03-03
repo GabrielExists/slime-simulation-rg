@@ -169,6 +169,8 @@ async fn run_inner(
         globals: GLOBALS,
         agent_stats: AGENT_STATS,
         trail_stats: TRAIL_STATS,
+        scale_factor: 1.0,
+        show_menu: true,
     };
 
     let program_init = ProgramInit {

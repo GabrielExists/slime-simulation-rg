@@ -4,13 +4,13 @@ use egui_wgpu::Renderer;
 use egui_winit::State;
 use wgpu::StoreOp;
 use winit::event::WindowEvent;
+use crate::configuration_menu;
 use crate::program::*;
 
 
 pub struct SlotEgui {
     pub state: State,
     pub renderer: Renderer,
-    pub scale_factor: f32,
 }
 
 impl Slot for SlotEgui {
@@ -20,7 +20,7 @@ impl Slot for SlotEgui {
     fn create(program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) -> Self {
         let egui_context = Context::default();
 
-        let egui_state = egui_winit::State::new(
+        let egui_state = State::new(
             egui_context,
             egui::viewport::ViewportId::ROOT,
             &program_init.window,
@@ -39,7 +39,6 @@ impl Slot for SlotEgui {
         Self {
             state: egui_state,
             renderer: egui_renderer,
-            scale_factor: 1.0,
         }
     }
 
@@ -55,7 +54,7 @@ impl Slot for SlotEgui {
             let screen_descriptor = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [program_buffers.width, program_buffers.height],
                 pixels_per_point: window.scale_factor() as f32
-                    * self.scale_factor,
+                    * configuration.scale_factor,
             };
             let surface_view = frame.output
                 .texture
@@ -68,32 +67,7 @@ impl Slot for SlotEgui {
             let raw_input = self.state.take_egui_input(window);
             self.state.egui_ctx().begin_pass(raw_input);
 
-            egui::Window::new("winit + egui + wgpu says hello!")
-                .resizable(true)
-                .vscroll(true)
-                .default_open(false)
-                //     self.state.egui_ctx()
-                .show(self.state.egui_ctx(), |ui| {
-                    ui.label("Label!");
-
-                    if ui.button("Button!").clicked() {
-                        println!("boom!")
-                    }
-
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.label(format!(
-                            "Pixels per point: {}",
-                            self.state.egui_ctx().pixels_per_point()
-                        ));
-                        if ui.button("-").clicked() {
-                            self.scale_factor = (self.scale_factor - 0.1).max(0.3);
-                        }
-                        if ui.button("+").clicked() {
-                            self.scale_factor = (self.scale_factor + 0.1).min(3.0);
-                        }
-                    });
-                });
+            configuration_menu::render_configuration_menu(&self.state, configuration);
 
             self.state.egui_ctx().set_pixels_per_point(screen_descriptor.pixels_per_point);
 
@@ -116,8 +90,8 @@ impl Slot for SlotEgui {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &surface_view,
                     resolve_target: None,
-                    ops: egui_wgpu::wgpu::Operations {
-                        load: egui_wgpu::wgpu::LoadOp::Load,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
                         store: StoreOp::Store,
                     },
                 })],
