@@ -17,7 +17,7 @@ impl Slot for SlotEgui {
     type Init = ();
     type Buffers = ();
 
-    fn create(program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
         let egui_context = Context::default();
 
         let egui_state = State::new(

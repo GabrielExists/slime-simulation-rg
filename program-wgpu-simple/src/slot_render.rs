@@ -24,7 +24,7 @@ impl Slot for SlotRender {
     type Init = SlotRenderInit;
     type Buffers = SlotRenderBuffers;
 
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
         // Graphics
         let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
@@ -106,7 +106,7 @@ impl Slot for SlotRender {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: program_buffers.pixel_input_buffer.as_entire_binding(),
+                    resource: program_buffers.trail_buffer.as_entire_binding(),
                 },
             ],
         });

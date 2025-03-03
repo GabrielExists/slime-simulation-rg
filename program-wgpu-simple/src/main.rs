@@ -69,8 +69,6 @@ rust_2018_idioms
 )]
 
 
-extern crate shared;
-
 mod window;
 mod program;
 mod slot_render;

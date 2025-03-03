@@ -183,10 +183,10 @@ async fn run_inner(
 
     let mut program_buffers = program::create_buffers(&program_init);
 
-    let mut slot_agents = SlotAgents::create(&program_init, &program_buffers);
-    let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers);
-    let mut slot_render = SlotRender::create(&program_init, &program_buffers);
-    let mut slot_egui = SlotEgui::create(&program_init, &program_buffers);
+    let mut slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
+    let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
+    let mut slot_render = SlotRender::create(&program_init, &program_buffers, &configuration);
+    let mut slot_egui = SlotEgui::create(&program_init, &program_buffers, &configuration);
 
     let start = std::time::Instant::now();
     let mut last_time = start;

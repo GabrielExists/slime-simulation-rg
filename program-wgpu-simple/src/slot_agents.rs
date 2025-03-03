@@ -28,7 +28,7 @@ impl Slot for SlotAgents {
     type Init = SlotAgentsInit;
     type Buffers = SlotAgentsBuffers;
 
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
         let mut num_agents = 0;
         let agent_bytes = configuration::AGENT_STATS
             .iter()
@@ -42,19 +42,10 @@ impl Slot for SlotAgents {
                         bytemuck::bytes_of(&agent).to_vec()
                     })
             }).collect::<Vec<_>>();
-        // let num_agents = configuration::AGENT_STATS[0].num_agents;
-        // let agent_bytes = std::iter::repeat(())
-        //     .take(configuration::AGENT_STATS[0].num_agents)
-        //     .flat_map(|()| {
-        //         let agent = spawn_agent(program_buffers, &configuration::AGENT_STATS[0].spawn_mode, 0);
-        //         bytemuck::bytes_of(&agent).to_vec()
-        //     })
-        //     .collect::<Vec<_>>();
-        let agent_stats_bytes = configuration::AGENT_STATS.iter().flat_map(|stats_all|
-            bytemuck::bytes_of(&stats_all.shader_stats).to_vec()
-        ).collect::<Vec<_>>();
+
+        let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
         let agent_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Agent buffer"),
+            label: Some("Agent stats buffer"),
             contents: &agent_stats_bytes,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
@@ -167,6 +158,11 @@ impl Slot for SlotAgents {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
+        // Update buffers
+        let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
+        program_init.queue.write_buffer(&self.init.agent_stats_buffer, 0, &agent_stats_bytes);
+        program_init.queue.submit([]);
+
         // Run compute pass
         let mut encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -182,14 +178,16 @@ impl Slot for SlotAgents {
             cpass.dispatch_workgroups(self.init.num_agents.div_ceil(256) as u32, 1, 1);
         }
 
-        encoder.copy_buffer_to_buffer(
-            &program_buffers.trail_buffer,
-            0,
-            &program_buffers.pixel_input_buffer,
-            0,
-            (program_buffers.num_bytes_screen_buffers) as wgpu::BufferAddress,
-        );
         program_init.queue.submit([encoder.finish()]);
+    }
+}
+
+impl SlotAgents {
+    fn bytes_from_agent_stats(configuration: &ConfigurationValues) -> Vec<u8> {
+        let agent_stats_bytes = configuration.agent_stats.iter().flat_map(|stats_all|
+            bytemuck::bytes_of(&stats_all.shader_stats).to_vec()
+        ).collect::<Vec<_>>();
+        agent_stats_bytes
     }
 }
 

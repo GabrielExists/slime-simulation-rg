@@ -26,7 +26,6 @@ pub struct ProgramBuffers {
 
     pub num_bytes_screen_buffers: usize,
     pub trail_buffer: wgpu::Buffer,
-    pub pixel_input_buffer: wgpu::Buffer,
 }
 
 // Data regenerated each frame
@@ -57,20 +56,11 @@ pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
             | wgpu::BufferUsages::COPY_SRC,
     });
 
-    let pixel_input_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Pixel input buffer"),
-        contents: &empty_bytes,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
-
     let buffers = ProgramBuffers {
         width,
         height,
         num_bytes_screen_buffers: num_bytes,
         trail_buffer,
-        pixel_input_buffer,
     };
     buffers
 }
@@ -100,7 +90,7 @@ pub trait Slot {
     type Init;
     // Data that is regenerated when the window resizes
     type Buffers;
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self;
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self;
     fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
     fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers);
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues);

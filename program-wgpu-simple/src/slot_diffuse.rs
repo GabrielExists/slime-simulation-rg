@@ -25,10 +25,8 @@ impl Slot for SlotDiffuse {
     type Init = SlotDiffuseInit;
     type Buffers = SlotDiffuseBuffers;
 
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
-        let trail_stats_bytes = configuration::TRAIL_STATS.iter().flat_map(|trail_stats|
-            bytemuck::bytes_of(trail_stats).to_vec()
-        ).collect::<Vec<_>>();
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
+        let trail_stats_bytes = Self::bytes_from_trail_stats(configuration);
         let trail_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Trail buffer"),
             contents: &trail_stats_bytes,
@@ -120,6 +118,9 @@ impl Slot for SlotDiffuse {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
+        let trail_stats_bytes = Self::bytes_from_trail_stats(configuration);
+        program_init.queue.write_buffer(&self.init.trail_stats_buffer, 0, &trail_stats_bytes);
+        program_init.queue.submit([]);
         // Run compute pass
         let mut compute_encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -135,5 +136,14 @@ impl Slot for SlotDiffuse {
             cpass.dispatch_workgroups(program_buffers.width.div_ceil(8), program_buffers.height.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
+    }
+}
+
+impl SlotDiffuse {
+    fn bytes_from_trail_stats(configuration: &ConfigurationValues) -> Vec<u8> {
+        let trail_stats_bytes = configuration.trail_stats.iter().flat_map(|trail_stats|
+            bytemuck::bytes_of(trail_stats).to_vec()
+        ).collect::<Vec<_>>();
+        trail_stats_bytes
     }
 }
