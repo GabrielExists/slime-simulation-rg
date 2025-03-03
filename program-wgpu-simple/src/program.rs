@@ -36,7 +36,7 @@ pub struct Frame {
 }
 
 // We create buffers in bulk, because many shaders share them
-pub fn create_buffers(program_init: &ProgramInit) -> ProgramBuffers {
+pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
     let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
     let width = program_init.window.inner_size().width;
     let height = program_init.window.inner_size().height;
@@ -100,8 +100,8 @@ pub trait Slot {
     type Init;
     // Data that is regenerated when the window resizes
     type Buffers;
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self;
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers);
-    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame);
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self;
+    fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
+    fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers);
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame);
 }

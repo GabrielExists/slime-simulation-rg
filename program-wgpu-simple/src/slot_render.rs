@@ -23,7 +23,7 @@ impl Slot for SlotRender {
     type Init = SlotRenderInit;
     type Buffers = SlotRenderBuffers;
 
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
         // Graphics
         let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
@@ -98,7 +98,7 @@ impl Slot for SlotRender {
         }
     }
 
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
+    fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
         let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("render bind group"),
             layout: &init.bind_group_layout,
@@ -113,12 +113,12 @@ impl Slot for SlotRender {
             bind_group,
         }
     }
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers) {
+    fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) {
         let buffers = Self::create_buffers(program_init, program_buffers, &self.init);
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit, _program_buffers: &ProgramBuffers, frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame) {
         let output_view = frame.output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());

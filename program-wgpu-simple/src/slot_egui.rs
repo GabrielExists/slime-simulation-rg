@@ -1,11 +1,6 @@
-use egui::menu::MenuState;
 use winit::event::WindowEvent;
 use crate::egui_tools::EguiRenderer;
-use shared::ShaderConstants;
 use crate::program::*;
-
-const VS_ENTRY_POINT: &'static str = "main_vs";
-const FS_ENTRY_POINT: &'static str = "main_fs";
 
 
 pub struct SlotEgui {
@@ -32,7 +27,7 @@ impl Slot for SlotEgui {
     type Init = SlotEguiInit;
     type Buffers = SlotEguiBuffers;
 
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
         let egui_renderer = EguiRenderer::new(
             &program_init.device,
             program_init.surface_format,
@@ -54,16 +49,16 @@ impl Slot for SlotEgui {
         }
     }
 
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
+    fn create_buffers(_program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, _init: &Self::Init) -> Self::Buffers {
         SlotEguiBuffers {
         }
     }
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers) {
+    fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) {
         let buffers = Self::create_buffers(program_init, program_buffers, &self.init);
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame) {
         {
             let screen_descriptor = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [program_buffers.width, program_buffers.height],

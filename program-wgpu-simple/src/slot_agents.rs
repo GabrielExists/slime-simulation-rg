@@ -27,7 +27,7 @@ impl Slot for SlotAgents {
     type Init = SlotAgentsInit;
     type Buffers = SlotAgentsBuffers;
 
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
         let mut num_agents = 0;
         let agent_bytes = configuration::AGENT_STATS
             .iter()
@@ -136,7 +136,7 @@ impl Slot for SlotAgents {
         }
     }
 
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
+    fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
         let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("compute bind group"),
             layout: &init.bind_group_layout,
@@ -160,12 +160,12 @@ impl Slot for SlotAgents {
         }
     }
 
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers) {
+    fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) {
         let buffers = Self::create_buffers(program_init, program_buffers, &self.init);
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame) {
         // Run compute pass
         let mut encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

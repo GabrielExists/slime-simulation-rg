@@ -24,7 +24,7 @@ impl Slot for SlotDiffuse {
     type Init = SlotDiffuseInit;
     type Buffers = SlotDiffuseBuffers;
 
-    fn create(program_init: &ProgramInit, program_buffers: &ProgramBuffers) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self {
         let trail_stats_bytes = configuration::TRAIL_STATS.iter().flat_map(|trail_stats|
             bytemuck::bytes_of(trail_stats).to_vec()
         ).collect::<Vec<_>>();
@@ -93,7 +93,7 @@ impl Slot for SlotDiffuse {
         }
     }
 
-    fn create_buffers(program_init: &ProgramInit, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
+    fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
         let bind_group = program_init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Compute bind group"),
             layout: &init.bind_group_layout,
@@ -113,12 +113,12 @@ impl Slot for SlotDiffuse {
         }
     }
 
-    fn recreate_buffers(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers) {
+    fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) {
         let buffers = Self::create_buffers(program_init, program_buffers, &self.init);
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit, program_buffers: &ProgramBuffers, program_frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame) {
         // Run compute pass
         let mut compute_encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

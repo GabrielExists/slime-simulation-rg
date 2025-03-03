@@ -69,10 +69,6 @@ rust_2018_idioms
 )]
 
 
-extern crate egui;
-extern crate egui_wgpu;
-extern crate winit;
-
 mod window;
 mod program;
 mod slot_render;
