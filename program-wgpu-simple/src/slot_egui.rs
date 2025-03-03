@@ -1,4 +1,5 @@
 use egui::menu::MenuState;
+use winit::event::WindowEvent;
 use crate::egui_tools::EguiRenderer;
 use shared::ShaderConstants;
 use crate::program::*;
@@ -36,7 +37,7 @@ impl Slot for SlotEgui {
             &program_init.device,
             program_init.surface_format,
             None,
-            4, &program_init.window);
+            1, &program_init.window);
 
         let init = SlotEguiInit {
             // pipeline,
@@ -147,5 +148,11 @@ impl Slot for SlotEgui {
         // }
         //
         // program_init.queue.submit([encoder.finish()]);
+    }
+}
+
+impl SlotEgui {
+    pub fn handle_input(&mut self, window: &winit::window::Window, event: &WindowEvent) {
+        self.init.egui_renderer.handle_input(window, event);
     }
 }

@@ -9,6 +9,7 @@ use winit::{
 use winit::window::Fullscreen;
 use crate::slot_agents::SlotAgents;
 use crate::slot_render::SlotRender;
+use crate::slot_egui::SlotEgui;
 use program::ProgramInit;
 use program::Slot;
 
@@ -176,6 +177,7 @@ async fn run_inner(
     let mut slot_agents = SlotAgents::create(&program_init, &program_buffers);
     let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers);
     let mut slot_render = SlotRender::create(&program_init, &program_buffers);
+    let mut slot_egui = SlotEgui::create(&program_init, &program_buffers);
 
     let start = std::time::Instant::now();
     let mut last_time = start;
@@ -218,9 +220,10 @@ async fn run_inner(
                 }
             }
             Event::WindowEvent {
-                event: WindowEvent::Resized(size),
+                event: event @ WindowEvent::Resized(size),
                 ..
             } => {
+                slot_egui.handle_input(program_init.window, &event);
                 if size.width != 0 && size.height != 0 {
                     // Recreate the swap chain with the new size
                     if let Ok((surface, surface_config)) = &mut surface_with_config {
@@ -231,14 +234,16 @@ async fn run_inner(
                         slot_agents.recreate_buffers(&program_init, &program_buffers);
                         slot_diffuse.recreate_buffers(&program_init, &program_buffers);
                         slot_render.recreate_buffers(&program_init, &program_buffers);
+                        slot_egui.recreate_buffers(&program_init, &program_buffers);
                         last_time = std::time::Instant::now();
                     }
                 }
             }
             Event::WindowEvent {
-                event: WindowEvent::RedrawRequested,
+                event: event @ WindowEvent::RedrawRequested,
                 ..
             } => {
+                slot_egui.handle_input(program_init.window, &event);
                 window.request_redraw();
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
                     let output = match surface.get_current_texture() {
@@ -264,14 +269,14 @@ async fn run_inner(
                         slot_diffuse.on_loop(&program_init, &program_buffers, &frame);
                     }
                     slot_render.on_loop(&program_init, &program_buffers, &frame);
+                    slot_egui.on_loop(&program_init, &program_buffers, &frame);
 
                     frame.output.present();
                 }
             }
             Event::WindowEvent {
-                event:
-                WindowEvent::CloseRequested
-                | WindowEvent::KeyboardInput {
+                event: event@ WindowEvent::CloseRequested |
+                event @ WindowEvent::KeyboardInput {
                     event:
                     winit::event::KeyEvent {
                         logical_key:
@@ -282,7 +287,15 @@ async fn run_inner(
                     ..
                 },
                 ..
-            } => event_loop_window_target.exit(),
+            } => {
+                slot_egui.handle_input(program_init.window, &event);
+                event_loop_window_target.exit()
+            },
+            Event::WindowEvent {
+                event, ..
+            } => {
+                slot_egui.handle_input(program_init.window, &event);
+            }
             _ => {}
         }
     }).unwrap();
