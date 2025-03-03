@@ -1,3 +1,5 @@
+use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
+use crate::configuration_menu::ConfigurationValues;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::program;
 use winit::{
@@ -163,6 +165,11 @@ async fn run_inner(
     };
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = create_module(module_raw);
+    let mut configuration = ConfigurationValues {
+        globals: GLOBALS,
+        agent_stats: AGENT_STATS,
+        trail_stats: TRAIL_STATS,
+    };
 
     let program_init = ProgramInit {
         device,
@@ -262,14 +269,14 @@ async fn run_inner(
                             return;
                         }
                     };
-                    let frame = program::create_program_frame(&mut program_buffers, output, &start, &mut last_time);
+                    let frame = program::create_program_frame(&mut program_buffers, output, &configuration, &start, &mut last_time);
 
-                    for _ in 0..crate::configuration::COMPUTE_STEPS_PER_RENDER {
-                        slot_agents.on_loop(&program_init, &program_buffers, &frame);
-                        slot_diffuse.on_loop(&program_init, &program_buffers, &frame);
+                    for _ in 0..configuration.globals.compute_steps_per_render {
+                        slot_agents.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
+                        slot_diffuse.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
                     }
-                    slot_render.on_loop(&program_init, &program_buffers, &frame);
-                    slot_egui.on_loop(&program_init, &program_buffers, &frame);
+                    slot_render.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
+                    slot_egui.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
 
                     frame.output.present();
                 }

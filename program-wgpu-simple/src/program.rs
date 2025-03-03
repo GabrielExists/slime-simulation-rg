@@ -1,6 +1,6 @@
 use std::thread;
 use std::time::{Duration, Instant};
-use configuration::{DELTA_TIME, TIME_SCALE};
+use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
 use crate::configuration;
 use shared::ShaderConstants;
@@ -75,18 +75,18 @@ pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
     buffers
 }
 
-pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::SurfaceTexture, start: &Instant, last_time: &mut Instant) -> Frame {
+pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::SurfaceTexture, configuration: &ConfigurationValues, start: &Instant, last_time: &mut Instant) -> Frame {
     let time = start.elapsed().as_secs_f32();
     let delta_time = last_time.elapsed().as_secs_f32();
-    if delta_time < DELTA_TIME {
-        thread::sleep(Duration::from_secs_f32(DELTA_TIME - delta_time));
+    if delta_time < configuration.globals.delta_time {
+        thread::sleep(Duration::from_secs_f32(configuration.globals.delta_time - delta_time));
     }
     *last_time = std::time::Instant::now();
     let push_constants = ShaderConstants {
         width: program_buffers.width,
         height: program_buffers.height,
         time,
-        delta_time: DELTA_TIME * TIME_SCALE,
+        delta_time: configuration.globals.delta_time * configuration.globals.time_scale,
     };
     let frame = Frame {
         output,
@@ -103,5 +103,5 @@ pub trait Slot {
     fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers) -> Self;
     fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
     fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers);
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame);
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues);
 }

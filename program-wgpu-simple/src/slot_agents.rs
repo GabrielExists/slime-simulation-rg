@@ -1,3 +1,4 @@
+use crate::configuration_menu::ConfigurationValues;
 use rand::Rng;
 use shared::{AgentStatsAll, ShaderConstants, SpawnMode};
 use crate::program::*;
@@ -165,7 +166,7 @@ impl Slot for SlotAgents {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
         // Run compute pass
         let mut encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

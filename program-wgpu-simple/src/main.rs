@@ -69,6 +69,8 @@ rust_2018_idioms
 )]
 
 
+extern crate shared;
+
 mod window;
 mod program;
 mod slot_render;
@@ -76,6 +78,7 @@ mod slot_agents;
 mod slot_diffuse;
 mod configuration;
 mod slot_egui;
+mod configuration_menu;
 
 fn main() {
     window::run();

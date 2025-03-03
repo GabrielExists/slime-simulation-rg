@@ -10,9 +10,16 @@ use shared::*;
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingOutward { distance: 170.0 };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingRandom { distance: 220.0 };
 // pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingClockwise { distance: 220.0 };
-pub const DELTA_TIME: f32 = 1.0 / 60.0;
-pub const TIME_SCALE: f32 = 1.0;
-pub const COMPUTE_STEPS_PER_RENDER: u32 = 1;
+pub struct Globals {
+    pub delta_time: f32,
+    pub time_scale: f32,
+    pub compute_steps_per_render: u32,
+}
+pub const GLOBALS: Globals = Globals {
+    delta_time: 1.0/60.0,
+    time_scale: 1.0,
+    compute_steps_per_render: 1,
+};
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     // Green
     AgentStatsAll {

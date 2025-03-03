@@ -1,3 +1,4 @@
+use crate::configuration_menu::ConfigurationValues;
 use egui::Context;
 use egui_wgpu::Renderer;
 use egui_winit::State;
@@ -7,12 +8,9 @@ use crate::program::*;
 
 
 pub struct SlotEgui {
-    pub menu_values: MenuValues,
     pub state: State,
     pub renderer: Renderer,
-}
-pub struct MenuValues {
-    scale_factor: f32,
+    pub scale_factor: f32,
 }
 
 impl Slot for SlotEgui {
@@ -39,11 +37,9 @@ impl Slot for SlotEgui {
         );
 
         Self {
-            menu_values: MenuValues {
-                scale_factor: 1.0
-            },
             state: egui_state,
             renderer: egui_renderer,
+            scale_factor: 1.0,
         }
     }
 
@@ -53,13 +49,13 @@ impl Slot for SlotEgui {
     fn recreate_buffers(&mut self, _program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) {
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame, configuration: &mut ConfigurationValues) {
         {
             let window = &program_init.window;
             let screen_descriptor = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [program_buffers.width, program_buffers.height],
                 pixels_per_point: window.scale_factor() as f32
-                    * self.menu_values.scale_factor,
+                    * self.scale_factor,
             };
             let surface_view = frame.output
                 .texture
@@ -91,10 +87,10 @@ impl Slot for SlotEgui {
                             self.state.egui_ctx().pixels_per_point()
                         ));
                         if ui.button("-").clicked() {
-                            self.menu_values.scale_factor = (self.menu_values.scale_factor - 0.1).max(0.3);
+                            self.scale_factor = (self.scale_factor - 0.1).max(0.3);
                         }
                         if ui.button("+").clicked() {
-                            self.menu_values.scale_factor = (self.menu_values.scale_factor + 0.1).min(3.0);
+                            self.scale_factor = (self.scale_factor + 0.1).min(3.0);
                         }
                     });
                 });

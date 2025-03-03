@@ -1,3 +1,4 @@
+use crate::configuration_menu::ConfigurationValues;
 use crate::configuration;
 use shared::ShaderConstants;
 use crate::program::*;
@@ -118,7 +119,7 @@ impl Slot for SlotDiffuse {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
         // Run compute pass
         let mut compute_encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

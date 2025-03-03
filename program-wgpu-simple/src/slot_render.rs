@@ -1,3 +1,4 @@
+use crate::configuration_menu::ConfigurationValues;
 use shared::ShaderConstants;
 use crate::program::*;
 
@@ -118,7 +119,7 @@ impl Slot for SlotRender {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame, configuration: &mut ConfigurationValues) {
         let output_view = frame.output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
