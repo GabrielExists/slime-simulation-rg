@@ -11,11 +11,12 @@ use shared::ShaderConstants;
 /// or disable one
 
 // Data that is created at program init
-pub struct ProgramInit {
+pub struct ProgramInit<'window> {
     pub device: wgpu::Device,
     pub surface_format: wgpu::TextureFormat,
     pub module: wgpu::ShaderModule,
     pub queue: wgpu::Queue,
+    pub window: &'window winit::window::Window,
 }
 
 // Data regenerated when window is resized
@@ -34,12 +35,11 @@ pub struct Frame {
     pub push_constants: shared::ShaderConstants,
 }
 
-
 // We create buffers in bulk, because many shaders share them
-pub fn create_buffers(program_init: &ProgramInit, size: winit::dpi::PhysicalSize<u32>) -> ProgramBuffers {
+pub fn create_buffers(program_init: &ProgramInit) -> ProgramBuffers {
     let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
-    let width = size.width;
-    let height = size.height;
+    let width = program_init.window.inner_size().width;
+    let height = program_init.window.inner_size().height;
     println!("Width and height {}, {}", width, height);
     let num_pixels = ((width * height).div_ceil(alignment) * alignment) as usize;
 

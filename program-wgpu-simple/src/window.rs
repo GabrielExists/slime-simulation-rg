@@ -23,10 +23,9 @@ pub fn run() {
 
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app = crate::egui_app::App::new();
+    // let mut app = crate::egui_app::App::new();
 
-    event_loop.run_app(&mut app).expect("Failed to run app");
-    /*
+    // event_loop.run_app(&mut app).expect("Failed to run app");
 
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
@@ -126,6 +125,7 @@ async fn run_inner(
         |pending| pending.preferred_format,
         |(_, surface_config)| surface_config.format,
     );
+    println!("Preferred surface format: {:?}, actual surface format {:?}", wgpu::TextureFormat::Rgba8UnormSrgb, surface_format);
     fn auto_configure_surface<'a>(
         adapter: &wgpu::Adapter,
         device: &wgpu::Device,
@@ -168,9 +168,10 @@ async fn run_inner(
         surface_format,
         module,
         queue,
+        window: &window,
     };
 
-    let mut program_buffers = program::create_buffers(&program_init, window.inner_size());
+    let mut program_buffers = program::create_buffers(&program_init);
 
     let mut slot_agents = SlotAgents::create(&program_init, &program_buffers);
     let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers);
@@ -226,7 +227,7 @@ async fn run_inner(
                         surface_config.width = size.width;
                         surface_config.height = size.height;
                         surface.configure(&program_init.device, surface_config);
-                        program_buffers = program::create_buffers(&program_init, size);
+                        program_buffers = program::create_buffers(&program_init);
                         slot_agents.recreate_buffers(&program_init, &program_buffers);
                         slot_diffuse.recreate_buffers(&program_init, &program_buffers);
                         slot_render.recreate_buffers(&program_init, &program_buffers);
@@ -286,7 +287,7 @@ async fn run_inner(
         }
     }).unwrap();
 
-     */
+     // */
 }
 
 // fn create_pipeline(
