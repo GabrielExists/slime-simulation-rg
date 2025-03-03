@@ -212,7 +212,7 @@ pub fn main_fs(
 
     let pixel = pixel_view(&mut trail_buffer[index]);
     // *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
-    *output = vec4(pixel.x_frac(), pixel.y_frac(), 0.0, 1.0)
+    *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
 }
 
 #[spirv(vertex)]
