@@ -81,7 +81,7 @@ impl Slot for SlotRender {
                 module: &program_init.module,
                 entry_point: FS_ENTRY_POINT,
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: program_init.surface_format,
+                    format: *program_init.surface_format,
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],

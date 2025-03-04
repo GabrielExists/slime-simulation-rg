@@ -30,7 +30,7 @@ impl Slot for SlotEgui {
         );
         let egui_renderer = Renderer::new(
             &program_init.device,
-            program_init.surface_format,
+            *program_init.surface_format,
             None,
             1,
             true,

@@ -12,7 +12,7 @@ use winit::window::Fullscreen;
 use crate::slot_agents::SlotAgents;
 use crate::slot_render::SlotRender;
 use crate::slot_egui::SlotEgui;
-use program::ProgramInit;
+use program::{Program, ProgramInit};
 use program::Slot;
 use shared::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 
@@ -166,29 +166,15 @@ async fn run_inner(
     };
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = create_module(module_raw);
-    let mut configuration = ConfigurationValues {
-        globals: GLOBALS,
-        agent_stats: AGENT_STATS,
-        trail_stats: TRAIL_STATS,
-        scale_factor: 1.0,
-        show_menu: true,
-        respawn: false,
-    };
 
     let program_init = ProgramInit {
-        device,
-        surface_format,
-        module,
-        queue,
+        device: &device,
+        surface_format: &surface_format,
+        module: &module,
+        queue: &queue,
         window: &window,
     };
-
-    let mut program_buffers = program::create_buffers(&program_init);
-
-    let mut slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
-    let mut slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
-    let mut slot_render = SlotRender::create(&program_init, &program_buffers, &configuration);
-    let mut slot_egui = SlotEgui::create(&program_init, &program_buffers, &configuration);
+    let mut program = Program::new(program_init);
 
     let start = std::time::Instant::now();
     let mut last_time = start;
@@ -218,7 +204,7 @@ async fn run_inner(
                     .expect("Failed to create surface from window (after resume)");
                 surface_with_config = Ok(auto_configure_surface(
                     &adapter,
-                    &program_init.device,
+                    &device,
                     new_surface,
                     window.inner_size(),
                 ));
@@ -234,18 +220,14 @@ async fn run_inner(
                 event: event @ WindowEvent::Resized(size),
                 ..
             } => {
-                slot_egui.handle_input(program_init.window, &event);
+                program.handle_input(&event);
                 if size.width != 0 && size.height != 0 {
                     // Recreate the swap chain with the new size
                     if let Ok((surface, surface_config)) = &mut surface_with_config {
                         surface_config.width = size.width;
                         surface_config.height = size.height;
-                        surface.configure(&program_init.device, surface_config);
-                        program_buffers = program::create_buffers(&program_init);
-                        slot_agents.recreate_buffers(&program_init, &program_buffers);
-                        slot_diffuse.recreate_buffers(&program_init, &program_buffers);
-                        slot_render.recreate_buffers(&program_init, &program_buffers);
-                        slot_egui.recreate_buffers(&program_init, &program_buffers);
+                        surface.configure(&device, surface_config);
+                        program.recreate_buffers();
                         last_time = std::time::Instant::now();
                     }
                 }
@@ -254,16 +236,16 @@ async fn run_inner(
                 event: event @ WindowEvent::RedrawRequested,
                 ..
             } => {
-                slot_egui.handle_input(program_init.window, &event);
+                program.handle_input(&event);
                 window.request_redraw();
                 if let Ok((surface, surface_config)) = &mut surface_with_config {
-                    let output = match surface.get_current_texture() {
+                    let mut output = match surface.get_current_texture() {
                         Ok(surface) => surface,
                         Err(err) => {
                             eprintln!("get_current_texture error: {err:?}");
                             match err {
                                 wgpu::SurfaceError::Lost => {
-                                    surface.configure(&program_init.device, surface_config);
+                                    surface.configure(&device, surface_config);
                                 }
                                 wgpu::SurfaceError::OutOfMemory => {
                                     event_loop_window_target.exit();
@@ -273,16 +255,9 @@ async fn run_inner(
                             return;
                         }
                     };
-                    let frame = program::create_program_frame(&mut program_buffers, output, &configuration, &start, &mut last_time);
+                    program.on_loop(&mut output, &start, &mut last_time);
 
-                    for _ in 0..configuration.globals.compute_steps_per_render {
-                        slot_agents.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
-                        slot_diffuse.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
-                    }
-                    slot_render.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
-                    slot_egui.on_loop(&program_init, &program_buffers, &frame, &mut configuration);
-
-                    frame.output.present();
+                    output.present();
                 }
             }
             Event::WindowEvent {
@@ -299,13 +274,13 @@ async fn run_inner(
                 },
                 ..
             } => {
-                slot_egui.handle_input(program_init.window, &event);
+                program.handle_input(&event);
                 event_loop_window_target.exit()
             },
             Event::WindowEvent {
                 event, ..
             } => {
-                slot_egui.handle_input(program_init.window, &event);
+                program.handle_input(&event);
             }
             _ => {}
         }
