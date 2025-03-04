@@ -14,6 +14,7 @@ use crate::slot_render::SlotRender;
 use crate::slot_egui::SlotEgui;
 use program::ProgramInit;
 use program::Slot;
+use shared::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -48,7 +49,7 @@ pub fn run() {
         .create_window(
             Window::default_attributes()
                 .with_title("Rust GPU - wgpu")
-                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 480.0))
+                .with_inner_size(winit::dpi::LogicalSize::new(DEFAULT_WIDTH as f32, DEFAULT_HEIGHT as f32))
         )
         .unwrap();
 
@@ -171,6 +172,7 @@ async fn run_inner(
         trail_stats: TRAIL_STATS,
         scale_factor: 1.0,
         show_menu: true,
+        respawn: false,
     };
 
     let program_init = ProgramInit {

@@ -17,7 +17,7 @@ impl Slot for SlotEgui {
     type Init = ();
     type Buffers = ();
 
-    fn create(program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
+    fn create(program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, _configuration: &ConfigurationValues) -> Self {
         let egui_context = Context::default();
 
         let egui_state = State::new(
@@ -52,7 +52,7 @@ impl Slot for SlotEgui {
         {
             let window = &program_init.window;
             let screen_descriptor = egui_wgpu::ScreenDescriptor {
-                size_in_pixels: [program_buffers.width, program_buffers.height],
+                size_in_pixels: [program_buffers.screen_size.width, program_buffers.screen_size.height],
                 pixels_per_point: window.scale_factor() as f32
                     * configuration.scale_factor,
             };
@@ -67,7 +67,7 @@ impl Slot for SlotEgui {
             let raw_input = self.state.take_egui_input(window);
             self.state.egui_ctx().begin_pass(raw_input);
 
-            configuration_menu::render_configuration_menu(&self.state, configuration);
+            configuration_menu::render_configuration_menu(&self.state, program_buffers.screen_size, configuration);
 
             self.state.egui_ctx().set_pixels_per_point(screen_descriptor.pixels_per_point);
 

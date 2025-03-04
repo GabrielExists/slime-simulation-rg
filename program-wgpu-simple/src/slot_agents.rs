@@ -1,9 +1,9 @@
+use winit::dpi::PhysicalSize;
 use crate::configuration_menu::ConfigurationValues;
 use rand::Rng;
 use shared::{AgentStatsAll, ShaderConstants, SpawnMode};
 use crate::program::*;
 use wgpu::util::DeviceExt;
-use crate::configuration;
 
 const CS_ENTRY_POINT: &str = "main_cs";
 
@@ -30,18 +30,7 @@ impl Slot for SlotAgents {
 
     fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
         let mut num_agents = 0;
-        let agent_bytes = configuration::AGENT_STATS
-            .iter()
-            .enumerate()
-            .flat_map(|(channel_index, agent_stats): (usize, &AgentStatsAll)| {
-                num_agents += agent_stats.num_agents;
-                std::iter::repeat(())
-                    .take(agent_stats.num_agents)
-                    .flat_map(move |()| {
-                        let agent = spawn_agent(program_buffers, &agent_stats.spawn_mode, channel_index as u32);
-                        bytemuck::bytes_of(&agent).to_vec()
-                    })
-            }).collect::<Vec<_>>();
+        let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
 
         let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
         let agent_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -158,9 +147,25 @@ impl Slot for SlotAgents {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
+
         // Update buffers
         let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
         program_init.queue.write_buffer(&self.init.agent_stats_buffer, 0, &agent_stats_bytes);
+        if configuration.respawn {
+            configuration.respawn = false;
+            let mut num_agents = 0;
+            let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
+            let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Agent buffer recreated"),
+                contents: &agent_bytes,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+            });
+            self.init.agents_buffer = agent_buffer;
+            self.init.num_agents = num_agents;
+            self.recreate_buffers(program_init, program_buffers);
+        }
         program_init.queue.submit([]);
 
         // Run compute pass
@@ -189,33 +194,49 @@ impl SlotAgents {
         ).collect::<Vec<_>>();
         agent_stats_bytes
     }
+
+    fn bytes_from_agents(configuration: &ConfigurationValues, size: PhysicalSize<u32>, num_agents: &mut usize) -> Vec<u8> {
+        let agent_bytes = configuration.agent_stats
+            .iter()
+            .enumerate()
+            .flat_map(|(channel_index, agent_stats): (usize, &AgentStatsAll)| {
+                *num_agents += agent_stats.num_agents;
+                std::iter::repeat(())
+                    .take(agent_stats.num_agents)
+                    .flat_map(move |()| {
+                        let agent = spawn_agent(size, &agent_stats.spawn_mode, channel_index as u32);
+                        bytemuck::bytes_of(&agent).to_vec()
+                    })
+            }).collect::<Vec<_>>();
+        agent_bytes
+    }
 }
 
-fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel_index: u32) -> shared::Agent {
-    let center_x = program_buffers.width as f32 / 2.0;
-    let center_y = program_buffers.height as f32 / 2.0;
+fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u32) -> shared::Agent {
+    let center_x = size.width as f32 / 2.0;
+    let center_y = size.height as f32 / 2.0;
     match spawn_mode {
-        SpawnMode::CenterFacingOutwards => {
+        SpawnMode::CenterFacingOutward => {
             shared::Agent {
-                x: program_buffers.width as f32 / 2.0,
-                y: program_buffers.height as f32 / 2.0,
+                x: size.width as f32 / 2.0,
+                y: size.height as f32 / 2.0,
                 angle: get_random_angle(),
                 channel_index,
             }
         }
-        SpawnMode::PointFacingOutwards { x, y } => {
+        SpawnMode::PointFacingOutward { x, y } => {
             shared::Agent {
-                x: *x,
-                y: *y,
+                x: *x as f32,
+                y: *y as f32,
                 angle: get_random_angle(),
                 channel_index,
             }
         }
-        SpawnMode::CircleFacingInwards { max_distance } => {
+        SpawnMode::CircleFacingInward { max_distance } => {
             let max_number = 100000;
             let random_angle = get_random_angle();
             let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
-            let random_distance = random_fraction * *max_distance;
+            let random_distance = random_fraction * *max_distance as f32;
             shared::Agent {
                 x: center_x + random_angle.cos() * random_distance,
                 y: center_y + random_angle.sin() * random_distance,
@@ -225,8 +246,8 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel
         }
         SpawnMode::EvenlyDistributed => {
             shared::Agent {
-                x: rand::rng().random_range(0..program_buffers.width * 10) as f32 / 10.0,
-                y: rand::rng().random_range(0..program_buffers.height * 10) as f32 / 10.0,
+                x: rand::rng().random_range(0..size.width * 10) as f32 / 10.0,
+                y: rand::rng().random_range(0..size.height * 10) as f32 / 10.0,
                 angle: get_random_angle(),
                 channel_index,
             }
@@ -234,8 +255,8 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel
         SpawnMode::CircumferenceFacingInward { distance } => {
             let random_angle = get_random_angle();
             shared::Agent {
-                x: center_x + random_angle.cos() * distance,
-                y: center_y + random_angle.sin() * distance,
+                x: center_x + random_angle.cos() * *distance as f32,
+                y: center_y + random_angle.sin() * *distance as f32,
                 angle: std::f32::consts::PI + random_angle,
                 channel_index,
             }
@@ -243,8 +264,8 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel
         SpawnMode::CircumferenceFacingOutward { distance } => {
             let random_angle = get_random_angle();
             shared::Agent {
-                x: center_x + random_angle.cos() * distance,
-                y: center_y + random_angle.sin() * distance,
+                x: center_x + random_angle.cos() * *distance as f32,
+                y: center_y + random_angle.sin() * *distance as f32,
                 angle: random_angle,
                 channel_index,
             }
@@ -252,8 +273,8 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel
         SpawnMode::CircumferenceFacingRandom { distance } => {
             let random_angle = get_random_angle();
             shared::Agent {
-                x: center_x + random_angle.cos() * distance,
-                y: center_y + random_angle.sin() * distance,
+                x: center_x + random_angle.cos() * *distance as f32,
+                y: center_y + random_angle.sin() * *distance as f32,
                 angle: get_random_angle(),
                 channel_index,
             }
@@ -261,8 +282,8 @@ fn spawn_agent(program_buffers: &ProgramBuffers, spawn_mode: &SpawnMode, channel
         SpawnMode::CircumferenceFacingClockwise { distance } => {
             let random_angle = get_random_angle();
             shared::Agent {
-                x: center_x + random_angle.cos() * distance,
-                y: center_y + random_angle.sin() * distance,
+                x: center_x + random_angle.cos() * *distance as f32,
+                y: center_y + random_angle.sin() * *distance as f32,
                 angle: std::f32::consts::PI / 2.0 + random_angle,
                 channel_index,
             }

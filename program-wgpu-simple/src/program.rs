@@ -1,8 +1,8 @@
 use std::thread;
 use std::time::{Duration, Instant};
+use winit::dpi::PhysicalSize;
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
-use crate::configuration;
 use shared::ShaderConstants;
 
 /// A slot is the backend that a shader "slots" into.
@@ -21,10 +21,9 @@ pub struct ProgramInit<'window> {
 
 // Data regenerated when window is resized
 pub struct ProgramBuffers {
-    pub width: u32,
-    pub height: u32,
+    pub screen_size: PhysicalSize<u32>,
 
-    pub num_bytes_screen_buffers: usize,
+    pub _num_bytes_screen_buffers: usize,
     pub trail_buffer: wgpu::Buffer,
 }
 
@@ -36,16 +35,9 @@ pub struct Frame {
 
 // We create buffers in bulk, because many shaders share them
 pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
-    let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
-    let width = program_init.window.inner_size().width;
-    let height = program_init.window.inner_size().height;
-    println!("Width and height {}, {}", width, height);
-    let num_pixels = ((width * height).div_ceil(alignment) * alignment) as usize;
-
-    let empty_bytes = std::iter::repeat(0 as u32)
-        .take(num_pixels)
-        .flat_map(u32::to_ne_bytes)
-        .collect::<Vec<_>>();
+    let size = program_init.window.inner_size();
+    println!("Width and height {}, {}", size.width, size.height);
+    let empty_bytes = bytes_from_trail_map_size(size);
     let num_bytes = empty_bytes.len();
 
     let trail_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -57,9 +49,8 @@ pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
     });
 
     let buffers = ProgramBuffers {
-        width,
-        height,
-        num_bytes_screen_buffers: num_bytes,
+        screen_size: size,
+        _num_bytes_screen_buffers: num_bytes,
         trail_buffer,
     };
     buffers
@@ -73,8 +64,8 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
     }
     *last_time = std::time::Instant::now();
     let push_constants = ShaderConstants {
-        width: program_buffers.width,
-        height: program_buffers.height,
+        width: program_buffers.screen_size.width,
+        height: program_buffers.screen_size.height,
         time,
         delta_time: configuration.globals.delta_time * configuration.globals.time_scale,
     };
@@ -83,6 +74,16 @@ pub fn create_program_frame(program_buffers: &ProgramBuffers, output: wgpu::Surf
         push_constants,
     };
     frame
+}
+
+pub fn bytes_from_trail_map_size(size: PhysicalSize<u32>) -> Vec<u8> {
+    let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
+    let num_pixels = ((size.width * size.height).div_ceil(alignment) * alignment) as usize;
+    let empty_bytes = std::iter::repeat(0 as u32)
+        .take(num_pixels)
+        .flat_map(u32::to_ne_bytes)
+        .collect::<Vec<_>>();
+    empty_bytes
 }
 
 pub trait Slot {

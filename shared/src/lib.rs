@@ -2,6 +2,8 @@
 
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+#[cfg(not(target_arch = "spirv"))]
+use std::fmt::{Display, Formatter};
 use core::f32::consts::PI;
 use glam::{Vec3, vec3};
 
@@ -15,29 +17,62 @@ use spirv_std::num_traits::Float;
 use bytemuck::{Pod, Zeroable};
 
 #[allow(dead_code)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash)]
 pub enum SpawnMode {
     EvenlyDistributed,
-    CenterFacingOutwards,
-    PointFacingOutwards {
-        x: f32,
-        y: f32,
+    CenterFacingOutward,
+    PointFacingOutward {
+        x: u32,
+        y: u32,
     },
-    CircleFacingInwards {
-        max_distance: f32,
+    CircleFacingInward {
+        max_distance: u32,
     },
     CircumferenceFacingInward {
-        distance: f32,
+        distance: u32,
     },
     CircumferenceFacingOutward {
-        distance: f32,
+        distance: u32,
     },
     CircumferenceFacingRandom {
-        distance: f32,
+        distance: u32,
     },
     CircumferenceFacingClockwise {
-        distance: f32,
+        distance: u32,
     },
+}
+pub const DEFAULT_WIDTH: u32 = 800;
+pub const DEFAULT_HEIGHT: u32 = 480;
+pub const DEFAULT_DISTANCE: u32 = 170;
+
+#[cfg(not(target_arch = "spirv"))]
+impl Display for SpawnMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpawnMode::EvenlyDistributed => f.write_str("Evenly distributed"),
+            SpawnMode::CenterFacingOutward => f.write_str("Center facing outward"),
+            SpawnMode::PointFacingOutward { .. } => f.write_str("Point facing outward"),
+            SpawnMode::CircleFacingInward { .. } => f.write_str("Circle facing inward"),
+            SpawnMode::CircumferenceFacingInward { .. } => f.write_str("Circumference facing inwards"),
+            SpawnMode::CircumferenceFacingOutward { .. } => f.write_str("Circumference facing outward"),
+            SpawnMode::CircumferenceFacingRandom { .. } => f.write_str("Circumference facing random"),
+            SpawnMode::CircumferenceFacingClockwise { .. } => f.write_str("Circumference facing clockwise"),
+        }
+    }
+}
+impl SpawnMode {
+    pub fn distance(&self) -> Option<u32> {
+        match self {
+            SpawnMode::EvenlyDistributed => None,
+            SpawnMode::CenterFacingOutward => None,
+            SpawnMode::PointFacingOutward { .. } => None,
+            SpawnMode::CircleFacingInward { max_distance } => Some(*max_distance),
+            SpawnMode::CircumferenceFacingInward { distance } => Some(*distance),
+            SpawnMode::CircumferenceFacingOutward { distance } => Some(*distance),
+            SpawnMode::CircumferenceFacingRandom { distance } => Some(*distance),
+            SpawnMode::CircumferenceFacingClockwise { distance } => Some(*distance)
+        }
+    }
 }
 
 
@@ -52,6 +87,7 @@ pub struct ShaderConstants {
 
 #[derive(Copy, Clone)]
 pub struct AgentStatsAll {
+    pub name: &'static str,
     pub spawn_mode: SpawnMode,
     pub num_agents: usize,
     pub shader_stats: AgentStats,
@@ -64,15 +100,15 @@ pub const NUM_AGENT_TYPES: usize = 2;
 pub struct AgentStats {
     // Pixels travelled per second
     pub velocity: f32,
+    pub pixel_addition: f32,
     pub turn_speed: f32,
     pub turn_speed_avoidance: f32,
-    pub sensor_angle_spacing: f32,
-    pub sensor_offset: f32,
-    pub pixel_addition: f32,
     // Maximum value is 9.0
     // Minimum value is 0.0
     // Setting a value over 9 effectively disables avoidance of saturated trails
     pub avoidance_threshold: f32,
+    pub sensor_angle_spacing: f32,
+    pub sensor_offset: f32,
     pub attraction_channel_one: f32,
     pub attraction_channel_two: f32,
 }

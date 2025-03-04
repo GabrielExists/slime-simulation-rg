@@ -1,7 +1,10 @@
-use egui::Slider;
+use winit::dpi::PhysicalSize;
+use crate::configuration::TRAIL_NAMES;
+use egui::{Slider, Ui};
+use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::Globals;
-use shared::{AgentStatsAll, NUM_AGENT_TYPES, NUM_TRAIL_STATS, TrailStats};
+use shared::{AgentStatsAll, DEFAULT_DISTANCE, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
 
 pub struct ConfigurationValues {
     pub globals: Globals,
@@ -9,28 +12,162 @@ pub struct ConfigurationValues {
     pub trail_stats: [TrailStats; NUM_TRAIL_STATS],
     pub scale_factor: f32,
     pub show_menu: bool,
+    pub respawn: bool,
 }
 
-pub fn render_configuration_menu(state: &State, configuration: &mut ConfigurationValues) {
+pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues) {
     if configuration.show_menu {
         egui::Window::new("Configuration")
             .resizable(true)
             .vscroll(true)
             .default_open(false)
             .show(state.egui_ctx(), |ui| {
-                if ui.button("Hide").clicked() {
-                    configuration.show_menu = !configuration.show_menu;
-                }
-                for (agent_index, agent_stats) in configuration.agent_stats.iter_mut().enumerate() {
-                    ui.collapsing(format!("Agent {}", agent_index), |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Hide").clicked() {
+                        configuration.show_menu = !configuration.show_menu;
+                    }
+                    if ui.button("Respawn").clicked() {
+                        configuration.respawn = true;
+                    }
+                    // if ui.button("Reset trails").clicked() {
+                    //     configuration.reset_trails = true;
+                    // }
+                    // if ui.button("Respawn and reset trails").clicked() {
+                    //     configuration.respawn = true;
+                    //     configuration.reset_trails = true;
+                    // }
+                });
+                for agent_stats in configuration.agent_stats.iter_mut() {
+                    let spawn = &mut agent_stats.spawn_mode;
+                    ui.collapsing(format!("Agent {}", agent_stats.name), |ui| {
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.velocity, 5.0..=100.0)
+                            .text("Velocity"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.pixel_addition, 0.01..=1.0)
+                            .text("Pixel addition divisor").logarithmic(true));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed, 5.0..=100.0)
+                            .text("Turn speed"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed_avoidance, 5.0..=100.0)
+                            .text("Turn speed avoidance"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.avoidance_threshold, 0.0..=20.0)
-                            .text("Avoidance Threshold"));
+                            .text("Avoidance threshold"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_angle_spacing, 10.0..=170.0)
+                            .text("Sensor angle spacing (degrees)"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
+                            .text("Sensor offset"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_one, -1.0..=1.0)
+                            .text(format!("Attraction channel {}", TRAIL_NAMES[0])));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_two, -1.0..=1.0)
+                            .text(format!("Attraction channel {}", TRAIL_NAMES[1])));
+                        ui.separator();
+                        ui.label("Applies on reset:");
+                        // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
+                        ui.add(Slider::new(&mut agent_stats.num_agents, 5..=10000)
+                            .text("Num agents").logarithmic(true));
+                        ComboBox::from_label("Spawn mode")
+                            .selected_text(format!("{spawn}"))
+                            .show_ui(ui, |ui| {
+                                let new_value = SpawnMode::EvenlyDistributed {};
+                                let predicate = |mode: &SpawnMode| if let SpawnMode::EvenlyDistributed { .. } = mode {
+                                        true
+                                    } else { false };
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    predicate,
+                                    new_value);
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::EvenlyDistributed { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::EvenlyDistributed {});
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::CenterFacingOutward { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::CenterFacingOutward {});
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::PointFacingOutward { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::PointFacingOutward { x: 100, y: 100 });
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::CircleFacingInward { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::CircleFacingInward { max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::CircumferenceFacingOutward { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::CircumferenceFacingOutward { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::CircumferenceFacingRandom { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::CircumferenceFacingRandom { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
+                                selectable_value_pred(
+                                    ui,
+                                    spawn,
+                                    |mode| if let SpawnMode::CircumferenceFacingClockwise { .. } = mode {
+                                        true
+                                    } else { false },
+                                    SpawnMode::CircumferenceFacingClockwise { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
+                            });
+                        let width = screen_size.width;
+                        let height = screen_size.height;
+                        let diagonal_max_radius = (
+                            (width as f32 / 2.0).powi(2) + (height as f32 / 2.0).powi(2)
+                        ).sqrt() as u32;
+                        match spawn {
+                            SpawnMode::EvenlyDistributed => {}
+                            SpawnMode::CenterFacingOutward => {}
+                            SpawnMode::PointFacingOutward { x, y } => {
+                                ui.add(Slider::new(x, 0..=width)
+                                    .text("X"));
+                                ui.add(Slider::new(y, 0..=height)
+                                    .text("Y"));
+                            }
+                            SpawnMode::CircleFacingInward { max_distance } => {
+                                ui.add(Slider::new(max_distance, 0..=diagonal_max_radius)
+                                    .text("Max distance"));
+                            }
+                            SpawnMode::CircumferenceFacingInward { distance } => {
+                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                    .text("Distance"));
+                            }
+                            SpawnMode::CircumferenceFacingOutward { distance } => {
+                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                    .text("Distance"));
+                            }
+                            SpawnMode::CircumferenceFacingRandom { distance } => {
+                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                    .text("Distance"));
+                            }
+                            SpawnMode::CircumferenceFacingClockwise { distance } => {
+                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                    .text("Distance"));
+                            }
+                        }
                     });
                 }
                 for (trail_index, trail_stats) in configuration.trail_stats.iter_mut().enumerate() {
-                    ui.collapsing(format!("Trail {}", trail_index), |ui| {
+                    ui.collapsing(format!("Trail {}", TRAIL_NAMES[trail_index]), |ui| {
                         ui.add(Slider::new(&mut trail_stats.diffusion_speed, 0.0..=1000.0)
-                            .text("Diffusion Speed"));
+                            .text("Diffusion speed"));
+                        ui.add(Slider::new(&mut trail_stats.evaporation_speed, 0.0..=1000.0)
+                            .text("Evaporation speed"));
                     });
                 }
 
@@ -49,4 +186,20 @@ pub fn render_configuration_menu(state: &State, configuration: &mut Configuratio
                 });
             });
     }
+}
+
+pub fn selectable_value_pred<Value: std::fmt::Display, F>(
+    ui: &mut Ui,
+    current_value: &mut Value,
+    predicate: F,
+    selected_value: Value,
+) -> egui::Response
+    where F: Fn(&Value) -> bool {
+    let selected = predicate(current_value);
+    let mut response = ui.selectable_label(selected, selected_value.to_string());
+    if response.clicked() && !selected {
+        *current_value = selected_value;
+        response.mark_changed();
+    }
+    response
 }

@@ -24,7 +24,7 @@ impl Slot for SlotRender {
     type Init = SlotRenderInit;
     type Buffers = SlotRenderBuffers;
 
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, _configuration: &ConfigurationValues) -> Self {
         // Graphics
         let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
@@ -119,7 +119,7 @@ impl Slot for SlotRender {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame, configuration: &mut ConfigurationValues) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame, _configuration: &mut ConfigurationValues) {
         let output_view = frame.output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());

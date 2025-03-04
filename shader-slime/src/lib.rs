@@ -37,20 +37,22 @@ pub fn main_cs(
 
     // Sensor based on sensory data
     let weight_forward = sense(trail_buffer, constants, agent, &agent_stats, 0.0);
-    let weight_left = sense(trail_buffer, constants, agent, &agent_stats, agent_stats.sensor_angle_spacing);
-    let weight_right = sense(trail_buffer, constants, agent, &agent_stats, -agent_stats.sensor_angle_spacing);
+    let weight_left = sense(trail_buffer, constants, agent, &agent_stats, agent_stats.sensor_angle_spacing * PI / 180.0);
+    let weight_right = sense(trail_buffer, constants, agent, &agent_stats, -agent_stats.sensor_angle_spacing * PI / 180.0);
 
     let random_steer_strength = random as f32 / u32::MAX as f32;
+    let turn_speed = agent_stats.turn_speed * PI;
+    let turn_speed_avoidance = agent_stats.turn_speed_avoidance * PI;
 
     match (weight_left, weight_forward, weight_right) {
         (None, _, Some(_)) => {
-            agent.angle -= random_steer_strength * agent_stats.turn_speed_avoidance * constants.delta_time;
+            agent.angle -= random_steer_strength * turn_speed_avoidance * constants.delta_time;
         }
         (Some(_), _, None) => {
-            agent.angle += random_steer_strength * agent_stats.turn_speed_avoidance * constants.delta_time;
+            agent.angle += random_steer_strength * turn_speed_avoidance * constants.delta_time;
         }
         (Some(_), None, Some(_)) => {
-            agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed_avoidance * constants.delta_time;
+            agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed_avoidance * constants.delta_time;
         }
         (None, _, None) => {
             agent.angle += 0.0;
@@ -62,13 +64,13 @@ pub fn main_cs(
             }
             // If edges are stronger than center, pick a direction randomly
             else if weight_left > weight_forward && weight_right > weight_forward {
-                agent.angle += (random_steer_strength - 0.5) * 2.0 * agent_stats.turn_speed * constants.delta_time;
+                agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed * constants.delta_time;
             }
             // If there's a gradient in one direction, turn that way
             else if weight_right > weight_left {
-                agent.angle -= random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+                agent.angle -= random_steer_strength * turn_speed * constants.delta_time;
             } else if weight_left > weight_right {
-                agent.angle += random_steer_strength * agent_stats.turn_speed * constants.delta_time;
+                agent.angle += random_steer_strength * turn_speed * constants.delta_time;
             }
         }
     }

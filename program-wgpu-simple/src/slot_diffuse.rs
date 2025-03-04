@@ -1,5 +1,4 @@
 use crate::configuration_menu::ConfigurationValues;
-use crate::configuration;
 use shared::ShaderConstants;
 use crate::program::*;
 use wgpu::util::DeviceExt;
@@ -133,7 +132,7 @@ impl Slot for SlotDiffuse {
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
             );
-            cpass.dispatch_workgroups(program_buffers.width.div_ceil(8), program_buffers.height.div_ceil(8), 1);
+            cpass.dispatch_workgroups(program_buffers.screen_size.width.div_ceil(8), program_buffers.screen_size.height.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
     }
