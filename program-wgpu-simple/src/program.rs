@@ -1,9 +1,11 @@
 use std::thread;
 use std::time::{Duration, Instant};
+use rand::Rng;
 use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
-use winit::event::WindowEvent;
+use winit::event::{ElementState, MouseButton, WindowEvent};
+use crate::configuration_menu::render_configuration_menu;
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
 use shared::{ClickMode, ClickModeEncoded, ShaderConstants};
@@ -20,6 +22,9 @@ pub struct Program<'window> {
     slot_render: SlotRender,
     slot_egui: SlotEgui,
     configuration: ConfigurationValues,
+    mouse_click: Option<ClickStart>,
+    mouse_position: (f32, f32),
+    first_frame: bool,
 }
 
 // Data that is created at program init
@@ -43,6 +48,12 @@ pub struct ProgramBuffers {
 pub struct Frame<'output> {
     pub output: &'output mut wgpu::SurfaceTexture,
     pub push_constants: shared::ShaderConstants,
+}
+
+pub struct ClickStart {
+    x: f32,
+    y: f32,
+    time: Instant,
 }
 
 /// A slot is the backend that a shader "slots" into.
@@ -85,6 +96,9 @@ impl Program<'_> {
             slot_render,
             slot_egui,
             configuration,
+            mouse_click: None,
+            mouse_position: (0.0, 0.0),
+            first_frame: true,
         }
     }
 
@@ -127,9 +141,16 @@ impl Program<'_> {
             self.program_init.queue.submit([]);
         }
         let time = start.elapsed().as_secs_f32();
-        let delta_time = last_time.elapsed().as_secs_f32();
-        if delta_time < self.configuration.globals.delta_time {
-            thread::sleep(Duration::from_secs_f32(self.configuration.globals.delta_time - delta_time));
+        let mut delta_time = last_time.elapsed().as_secs_f32();
+        if self.first_frame {
+            delta_time = 0.0;
+            self.first_frame = false;
+        } else {
+            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.8..1.2);
+            if delta_time < fixed_delta_time {
+                thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
+                delta_time = fixed_delta_time;
+            }
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
@@ -137,7 +158,7 @@ impl Program<'_> {
             width: self.program_buffers.screen_size.width,
             height: self.program_buffers.screen_size.height,
             time,
-            delta_time: self.configuration.globals.delta_time * self.configuration.globals.time_scale,
+            delta_time: delta_time * self.configuration.globals.time_scale,
         };
         let frame = Frame {
             output,
@@ -156,7 +177,48 @@ impl Program<'_> {
     pub(crate) fn handle_input(&mut self, event: &WindowEvent) {
         let consumed = self.slot_egui.handle_input(&self.program_init.window, &event);
         if !consumed {
-
+            match event {
+                WindowEvent::CursorMoved { device_id, position } => {
+                    self.mouse_position = (position.x as f32, position.y as f32);
+                }
+                WindowEvent::CursorEntered { device_id } => {
+                }
+                WindowEvent::CursorLeft { device_id } => {
+                }
+                WindowEvent::MouseInput{ device_id, state, button }  => {
+                    println!("Button press {:?} {:?}", button, state);
+                    if let MouseButton::Left = button{
+                        match state {
+                            ElementState::Pressed => {
+                                let click_start = ClickStart {
+                                    x: self.mouse_position.0,
+                                    y: self.mouse_position.1,
+                                    time: Instant::now(),
+                                };
+                                self.mouse_click = Some(click_start);
+                            }
+                            ElementState::Released => {
+                                if let Some(start) = self.mouse_click.take() {
+                                    if start.time.elapsed() > Duration::from_secs_f32(3.0) {
+                                        self.configuration.show_menu = !self.configuration.show_menu;
+                                    } else {
+                                        match self.configuration.globals.click_mode {
+                                            ClickMode::Disabled => {}
+                                            ClickMode::ShowMenu => {
+                                                self.configuration.show_menu = true;
+                                            }
+                                            ClickMode::PaintTrail(_) => {}
+                                            ClickMode::ResetTrail(_) => {}
+                                            ClickMode::ResetAllTrails => {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
     }
 

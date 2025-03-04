@@ -28,20 +28,22 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     if ui.button("Hide").clicked() {
                         configuration.show_menu = !configuration.show_menu;
                     }
+                    if ui.button(if configuration.playing { "Pause" } else { "Resume" }).clicked() {
+                        configuration.playing = !configuration.playing;
+                    }
+                });
+                ui.horizontal(|ui| {
                     if ui.button("Respawn").clicked() {
                         configuration.respawn = true;
                     }
                     if ui.button("Reset trails").clicked() {
                         configuration.reset_trails = true;
                     }
-                    if ui.button("Respawn and reset trails").clicked() {
-                        configuration.respawn = true;
-                        configuration.reset_trails = true;
-                    }
-                    if ui.button(if configuration.playing { "Pause" } else { "Resume" }).clicked() {
-                        configuration.playing = !configuration.playing;
-                    }
                 });
+                if ui.button("Respawn and reset trails").clicked() {
+                    configuration.respawn = true;
+                    configuration.reset_trails = true;
+                }
                 for agent_stats in configuration.agent_stats.iter_mut() {
                     let spawn = &mut agent_stats.spawn_mode;
                     ui.collapsing(format!("Agent {}", agent_stats.name), |ui| {
@@ -76,6 +78,9 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::PointFacingOutward {..}), SpawnMode::PointFacingOutward { x: 100, y: 100 });
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircleFacingInward {..}), SpawnMode::CircleFacingInward {
                                     max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingInward {..}), SpawnMode::CircumferenceFacingInward {
+                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
                                 });
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingOutward {..}), SpawnMode::CircumferenceFacingOutward {
                                     distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
