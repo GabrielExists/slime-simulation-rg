@@ -292,8 +292,5 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
 }
 
 fn get_random_angle() -> f32 {
-    let max_number = 100000;
-    let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
-    let random_angle = random_fraction * (std::f32::consts::PI * 2.0);
-    random_angle
+    rand::rng().random_range(0.0..std::f32::consts::PI * 2.0)
 }

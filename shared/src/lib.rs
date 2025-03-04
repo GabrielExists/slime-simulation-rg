@@ -45,7 +45,7 @@ pub enum SpawnMode {
 }
 
 pub const DEFAULT_WIDTH: u32 = 800;
-pub const DEFAULT_HEIGHT: u32 = 480;
+pub const DEFAULT_HEIGHT: u32 = 800;
 pub const DEFAULT_DISTANCE: u32 = 170;
 
 #[cfg(not(target_arch = "spirv"))]
