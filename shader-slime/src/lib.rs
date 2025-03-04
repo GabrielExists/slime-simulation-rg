@@ -2,6 +2,7 @@
 #![deny(warnings)]
 
 extern crate spirv_std;
+extern crate core;
 
 mod lerp_test;
 
@@ -137,6 +138,8 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
                 let pixel = get_pixel(trail_buffer, constants, pos.as_uvec2());
                 sum += pixel.get_frac(0) * agent_stats.attraction_channel_one;
                 sum += pixel.get_frac(1) * agent_stats.attraction_channel_two;
+                sum += pixel.get_frac(2) * agent_stats.attraction_channel_three;
+                sum += pixel.get_frac(3) * agent_stats.attraction_channel_four;
             }
         }
     }
@@ -164,10 +167,14 @@ fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats:
 /// As a workaround, it is the callers responsibility to make sure position is within bounds
 pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderConstants, position: UVec2) -> PixelView<'pixel> {
     // if is_inside_bounds(position, constants) {
-    let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
+    let pixel_index = (position.y as usize * constants.width as usize + position.x as usize) * 2;
     // Some(
-    PixelView::new(&mut trail_buffer[pixel_index])
-    // )
+    // Safety: Safe since we're mutably borrowing different indices, which means there's not aliasing of mutable references
+    unsafe {
+        let a = &mut trail_buffer[pixel_index] as *mut _;
+        let b = &mut trail_buffer[pixel_index + 1] as *mut _;
+        PixelView::new(&mut *a, &mut *b)
+    }
     // } else {
     //     None
     // }
@@ -182,7 +189,7 @@ fn is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
 }
 
 
-#[spirv(compute(threads(8, 8, 3)))]
+#[spirv(compute(threads(8, 8, 4)))]
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
@@ -233,7 +240,12 @@ pub fn main_fs(
     let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
     if is_inside_bounds(position, constants) {
         let pixel = get_pixel(trail_buffer, constants, position.as_uvec2());
-        *output = vec4(pixel.x_frac(), 0.0, pixel.y_frac(), 1.0)
+        let r = f32::min(pixel.x_frac() + pixel.w_frac() * 0.3, 1.0);
+        let g = f32::min(pixel.y_frac() + pixel.w_frac() * 0.3, 1.0);
+        let b = f32::min(pixel.z_frac() + pixel.w_frac() * 0.3, 1.0);
+        *output = vec4(r, g, b, 1.0)
+        // let value = pixel.w_frac();
+        // *output = vec4(value, value, value, 1.0)
     } else {
         *output = vec4(1.0, 1.0, 1.0, 1.0);
     }

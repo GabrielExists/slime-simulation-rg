@@ -7,7 +7,7 @@ use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseButton, WindowEvent};
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
-use shared::{ClickMode, ShaderConstants};
+use shared::{ClickMode, ShaderConstants, INTS_PER_PIXEL};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::slot_egui::SlotEgui;
@@ -225,7 +225,7 @@ impl Program<'_> {
         let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
         let num_pixels = ((size.width * size.height).div_ceil(alignment) * alignment) as usize;
         let empty_bytes = std::iter::repeat(0 as u32)
-            .take(num_pixels)
+            .take(num_pixels * INTS_PER_PIXEL as usize)
             .flat_map(u32::to_ne_bytes)
             .collect::<Vec<_>>();
         empty_bytes

@@ -31,6 +31,26 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
             sensor_offset: 5.0,
             attraction_channel_one: 1.0,
             attraction_channel_two: -1.0,
+            attraction_channel_three: -1.0,
+            attraction_channel_four: -1.0,
+        },
+    },
+    AgentStatsAll {
+        name: "Green",
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        num_agents: 4000,
+        shader_stats: AgentStats {
+            velocity: 65.0,
+            pixel_addition: 1.0 / 5.0,
+            turn_speed: 80.0,
+            turn_speed_avoidance: 30.0,
+            avoidance_threshold: 20.0,
+            sensor_angle_spacing: 60.0,
+            sensor_offset: 5.0,
+            attraction_channel_one: -1.0,
+            attraction_channel_two: 1.0,
+            attraction_channel_three: -1.0,
+            attraction_channel_four: -1.0,
         },
     },
     AgentStatsAll {
@@ -45,24 +65,54 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
             avoidance_threshold: 20.0,
             sensor_angle_spacing: 60.0,
             sensor_offset: 5.0,
-            attraction_channel_one: 1.0,
-            attraction_channel_two: 0.2,
+            attraction_channel_one: -1.0,
+            attraction_channel_two: -1.0,
+            attraction_channel_three: 1.0,
+            attraction_channel_four: -1.0,
+        },
+    },
+    AgentStatsAll {
+        name: "Gray",
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        num_agents: 4000,
+        shader_stats: AgentStats {
+            velocity: 65.0,
+            pixel_addition: 1.0 / 5.0,
+            turn_speed: 80.0,
+            turn_speed_avoidance: 30.0,
+            avoidance_threshold: 20.0,
+            sensor_angle_spacing: 60.0,
+            sensor_offset: 5.0,
+            attraction_channel_one: -1.0,
+            attraction_channel_two: -1.0,
+            attraction_channel_three: -1.0,
+            attraction_channel_four: 1.0,
         },
     },
 ];
 
 pub const TRAIL_NAMES: [&'static str; NUM_TRAIL_STATS] = [
     "Red",
+    "Green",
     "Blue",
+    "Gray",
 ];
 
 pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
     TrailStats {
         evaporation_speed: 50.0,
-        diffusion_speed: 180.0,
+        diffusion_speed: 480.0,
     },
     TrailStats {
         evaporation_speed: 50.0,
-        diffusion_speed: 180.0,
+        diffusion_speed: 480.0,
+    },
+    TrailStats {
+        evaporation_speed: 50.0,
+        diffusion_speed: 480.0,
+    },
+    TrailStats {
+        evaporation_speed: 50.0,
+        diffusion_speed: 480.0,
     },
 ];

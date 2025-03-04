@@ -145,7 +145,7 @@ pub struct AgentStatsAll {
     pub shader_stats: AgentStats,
 }
 
-pub const NUM_AGENT_TYPES: usize = 2;
+pub const NUM_AGENT_TYPES: usize = 4;
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
@@ -163,9 +163,12 @@ pub struct AgentStats {
     pub sensor_offset: f32,
     pub attraction_channel_one: f32,
     pub attraction_channel_two: f32,
+    pub attraction_channel_three: f32,
+    pub attraction_channel_four: f32,
 }
 
-pub const NUM_TRAIL_STATS: usize = 2;
+pub const NUM_TRAIL_STATS: usize = 4;
+pub const INTS_PER_PIXEL: u32 = NUM_TRAIL_STATS.div_ceil(2) as u32;
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
@@ -219,45 +222,54 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
 }
 
 pub struct PixelView<'storage> {
-    storage: &'storage mut u32,
+    storage_one: &'storage mut u32,
+    storage_two: &'storage mut u32,
 }
 
 impl<'storage> PixelView<'storage> {
-    pub fn new(storage: &'storage mut u32) -> Self {
+    pub fn new(storage_one: &'storage mut u32, storage_two: &'storage mut u32) -> Self {
         PixelView {
-            storage,
+            storage_one,
+            storage_two,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 0 & 0xFFFF }
-    pub fn y(&self) -> u32 { *self.storage >> 16 & 0xFFFF }
-    // pub fn z(&self) -> u32 { *self.storage >> 0 & 0x3 } // 2
+    pub fn x(&self) -> u32 { *self.storage_one >> 0 & 0xFFFF }
+    pub fn y(&self) -> u32 { *self.storage_one >> 16 & 0xFFFF }
+    pub fn z(&self) -> u32 { *self.storage_two >> 0 & 0xFFFF }
+    pub fn w(&self) -> u32 { *self.storage_two >> 16 & 0xFFFF }
     pub fn get(&self, index: usize) -> u32 {
         match index {
             0 => self.x(),
-            _ => self.y(),
-            // _ => self.z(),
+            1 => self.y(),
+            2 => self.z(),
+            _ => self.w(),
         }
     }
     pub fn x_frac(&self) -> f32 { frac_from_int(self.x()) }
     pub fn y_frac(&self) -> f32 { frac_from_int(self.y()) }
-    // pub fn z_frac(&self) -> f32 { frac_from_int(self.z()) }
+    pub fn z_frac(&self) -> f32 { frac_from_int(self.z()) }
+    pub fn w_frac(&self) -> f32 { frac_from_int(self.w()) }
     pub fn get_frac(&self, index: usize) -> f32 {
         frac_from_int(self.get(index))
     }
     pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF0000 | (value & 0xFFFF) << 0;
+        *self.storage_one = *self.storage_one & 0xFFFF0000 | (value & 0xFFFF) << 0;
     }
     pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0x0000FFFF | ((value & 0xFFFF) << 16);
+        *self.storage_one = *self.storage_one & 0x0000FFFF | ((value & 0xFFFF) << 16);
     }
-    // pub fn set_z(&mut self, value: u32) {
-    //     *self.storage = *self.storage & 0xFFFFFF00 | ((value & 0xFF) << 0); // 8
-    // }
+    pub fn set_z(&mut self, value: u32) {
+        *self.storage_two = *self.storage_two & 0xFFFF0000 | (value & 0xFFFF) << 0;
+    }
+    pub fn set_w(&mut self, value: u32) {
+        *self.storage_two = *self.storage_two & 0x0000FFFF | ((value & 0xFFFF) << 16);
+    }
     pub fn set(&mut self, index: usize, value: u32) {
         match index {
             0 => self.set_x(value),
-            _ => self.set_y(value),
-            // _ => self.set_z(value),
+            1 => self.set_y(value),
+            2 => self.set_z(value),
+            _ => self.set_w(value),
         }
     }
     pub fn set_x_frac(&mut self, value: f32) {
@@ -266,49 +278,21 @@ impl<'storage> PixelView<'storage> {
     pub fn set_y_frac(&mut self, value: f32) {
         self.set_y(int_from_frac(value))
     }
-    // pub fn set_z_frac(&mut self, value: f32) {
-    //     self.set_z(int_from_frac(value))
-    // }
+    pub fn set_z_frac(&mut self, value: f32) {
+        self.set_z(int_from_frac(value))
+    }
+    pub fn set_w_frac(&mut self, value: f32) {
+        self.set_w(int_from_frac(value))
+    }
     pub fn set_frac(&mut self, index: usize, value: f32) {
         match index {
             0 => self.set_x_frac(value),
-            _ => self.set_y_frac(value),
-            // _ => self.set_z_frac(value),
+            1 => self.set_y_frac(value),
+            2 => self.set_z_frac(value),
+            _ => self.set_w_frac(value),
         }
     }
 }
-
-// impl<'storage> PixelView<'storage> {
-//     pub fn new(storage: &'storage mut u32) -> Self {
-//         PixelView {
-//             storage,
-//         }
-//     }
-//     pub fn x(&self) -> u32 { (*self.storage >> 16) & 0xFFFF }
-//     pub fn y(&self) -> u32 { (*self.storage >> 8) & 0xFF }
-//     pub fn z(&self) -> u32 { *self.storage & 0xFF }
-//     pub fn set_x(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0x0000FFFF | (value & 0xFFFF) << 16;
-//     }
-//     pub fn set_y(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0xFFFF00FF | (value & 0xFF) << 8;
-//     }
-//     pub fn set_z(&mut self, value: u32) {
-//         *self.storage = *self.storage & 0xFFFFFF00 | (value & 0xFF);
-//     }
-//     pub fn x_frac(&self) -> f32 { self.x() as f32 / 255.0 }
-//     pub fn y_frac(&self) -> f32 { self.y() as f32 / 255.0 }
-//     pub fn z_frac(&self) -> f32 { self.z() as f32 / 255.0 }
-//     pub fn set_x_frac(&mut self, value: f32) {
-//         self.set_x(int_from_frac(value))
-//     }
-//     pub fn set_y_frac(&mut self, value: f32) {
-//         self.set_y(int_from_frac(value))
-//     }
-//     pub fn set_z_frac(&mut self, value: f32) {
-//         self.set_z(int_from_frac(value))
-//     }
-// }
 
 
 pub const PIXEL_MAX: u32 = 2u32.pow(16) - 1;
@@ -332,25 +316,31 @@ mod test {
     #[test]
     fn test_set() {
         let mut a = 0x12345678;
-        pixel_view(&mut a).set_x(0x2BCD);
-        pixel_view(&mut a).set_y(0x4DEF);
-        // pixel_view(&mut a).set_z(0xEF);
-        let view = pixel_view(&mut a);
-        assert_eq!(view.x(), 0x2BCD);
-        assert_eq!(view.y(), 0x4DEF);
-        // assert_eq!(view.z(), 0xEF);
+        let mut b = 0x98765432;
+        let mut pixel = PixelView::new(&mut a, &mut b);
+        pixel.set_x(0x2BCD);
+        pixel.set_y(0x4DEF);
+        pixel.set_z(0xFEDC);
+        pixel.set_w(0xBA87);
+        assert_eq!(pixel.x(), 0x2BCD);
+        assert_eq!(pixel.y(), 0x4DEF);
+        assert_eq!(pixel.z(), 0xFEDC);
+        assert_eq!(pixel.w(), 0xBA87);
     }
 
     #[test]
     fn test_set_frac() {
         let mut a = 0x12345678;
-        pixel_view(&mut a).set_x_frac(0.5);
-        pixel_view(&mut a).set_y_frac(0.25);
-        // pixel_view(&mut a).set_z_frac(0.125);
-        let view = pixel_view(&mut a);
-        assert!(f32::abs(view.x_frac() - 0.5) < 0.01);
-        assert!(f32::abs(view.y_frac() - 0.25) < 0.01);
-        // assert_eq!(view.z_frac(), 0.125);
+        let mut b = 0x98765432;
+        let mut pixel = PixelView::new(&mut a, &mut b);
+        pixel.set_x_frac(0.5);
+        pixel.set_y_frac(0.25);
+        pixel.set_z_frac(0.75);
+        pixel.set_w_frac(0.125);
+        assert!(f32::abs(pixel.x_frac() - 0.5) < 0.01);
+        assert!(f32::abs(pixel.y_frac() - 0.25) < 0.01);
+        assert!(f32::abs(pixel.z_frac() - 0.75) < 0.01);
+        assert!(f32::abs(pixel.w_frac() - 0.125) < 0.01);
     }
 
     #[cfg(test)]
