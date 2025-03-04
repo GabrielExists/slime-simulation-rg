@@ -1,7 +1,3 @@
-use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
-use crate::configuration_menu::ConfigurationValues;
-use crate::slot_diffuse::SlotDiffuse;
-use crate::program;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -9,11 +5,7 @@ use winit::{
 };
 #[cfg(target_arch = "aarch64")]
 use winit::window::Fullscreen;
-use crate::slot_agents::SlotAgents;
-use crate::slot_render::SlotRender;
-use crate::slot_egui::SlotEgui;
-use program::{Program, ProgramInit};
-use program::Slot;
+use crate::program::{Program, ProgramInit};
 use shared::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 
 fn _print_type_name<T>(_: T) {

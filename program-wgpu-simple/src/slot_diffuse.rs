@@ -116,7 +116,7 @@ impl Slot for SlotDiffuse {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
         let trail_stats_bytes = Self::bytes_from_trail_stats(configuration);
         program_init.queue.write_buffer(&self.init.trail_stats_buffer, 0, &trail_stats_bytes);
         program_init.queue.submit([]);

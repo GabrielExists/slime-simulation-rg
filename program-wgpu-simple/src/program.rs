@@ -4,7 +4,6 @@ use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
-use winit::window::Window;
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
 use shared::ShaderConstants;
@@ -58,12 +57,12 @@ pub trait Slot {
     fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self;
     fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers;
     fn recreate_buffers(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers);
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame, configuration: &mut ConfigurationValues);
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, configuration: &mut ConfigurationValues);
 }
 
 impl Program<'_> {
-    pub fn new(program_init: ProgramInit) -> Program {
-        let mut configuration = ConfigurationValues {
+    pub fn new(program_init: ProgramInit<'_>) -> Program<'_> {
+        let configuration = ConfigurationValues {
             globals: GLOBALS,
             agent_stats: AGENT_STATS,
             trail_stats: TRAIL_STATS,
@@ -71,7 +70,7 @@ impl Program<'_> {
             show_menu: true,
             respawn: false,
         };
-        let mut program_buffers = Self::create_buffers(&program_init);
+        let program_buffers = Self::create_buffers(&program_init);
         let slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
         let slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
         let slot_render = SlotRender::create(&program_init, &program_buffers, &configuration);

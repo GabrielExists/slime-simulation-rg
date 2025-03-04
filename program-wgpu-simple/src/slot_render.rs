@@ -119,7 +119,7 @@ impl Slot for SlotRender {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame, _configuration: &mut ConfigurationValues) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame<'_>, _configuration: &mut ConfigurationValues) {
         let output_view = frame.output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
