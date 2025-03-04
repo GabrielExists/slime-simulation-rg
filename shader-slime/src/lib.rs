@@ -9,7 +9,7 @@ use core::f32::consts::PI;
 use glam::{Vec2, Vec4, vec2, UVec3, vec4};
 use shared::*;
 use spirv_std::{glam, spirv};
-use spirv_std::glam::{IVec2, ivec2, UVec2};
+use spirv_std::glam::{IVec2, ivec2, UVec2, uvec2};
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
 // we tie #[no_std] above to the same condition, so it's fine.
 #[cfg(target_arch = "spirv")]
@@ -166,7 +166,7 @@ pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderCons
     // if is_inside_bounds(position, constants) {
     let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
     // Some(
-    pixel_view(&mut trail_buffer[pixel_index])
+    PixelView::new(&mut trail_buffer[pixel_index])
     // )
     // } else {
     //     None
@@ -174,11 +174,11 @@ pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderCons
 }
 
 fn is_inside_bounds(position: IVec2, constants: &ShaderConstants) -> bool {
-    position.x > 0 && position.x < constants.width as i32 && position.y > 0 && position.y < constants.height as i32
+    position.x >= 0 && position.x < constants.width as i32 && position.y >= 0 && position.y < constants.height as i32
 }
 
-fn _is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
-    position.x > 0 && position.x < constants.width as u32 && position.y > 0 && position.y < constants.height as u32
+fn is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
+    position.x < constants.width as u32 && position.y < constants.height as u32
 }
 
 
@@ -189,7 +189,10 @@ pub fn diffuse_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_stats: &[TrailStats],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
 ) {
-    let index = id.y as usize * constants.width as usize + id.x as usize;
+    let pos = uvec2(id.x, id.y);
+    if !is_inside_bounds_u(pos, constants) {
+        return;
+    }
     let channel_index = id.z as usize;
     if channel_index >= NUM_AGENT_TYPES {
         return;
@@ -200,26 +203,24 @@ pub fn diffuse_cs(
     let mut sum = 0.0;
     for offset_x in -1..=1 {
         for offset_y in -1..=1 {
-            let sample_pos = ivec2(
-                id.x as i32 + offset_x,
-                id.y as i32 + offset_y,
-            );
+            let sample_pos = pos.as_ivec2() + ivec2(offset_x, offset_y);
             if is_inside_bounds(sample_pos, constants) {
                 let pixel = get_pixel(trail_buffer, constants, sample_pos.as_uvec2());
                 sum += pixel.get_frac(channel_index);
             }
         }
     }
+    let mut pixel = get_pixel(trail_buffer, constants, pos);
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
-        pixel_view(&mut trail_buffer[index]).get_frac(channel_index),
+        pixel.get_frac(channel_index),
         blur_result,
         (diffusion_speed / 100.0) * constants.delta_time,
     );
 
     let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
     let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-    pixel_view(&mut trail_buffer[index]).set_frac(channel_index, new_value);
+    pixel.set_frac(channel_index, new_value);
 }
 
 #[spirv(fragment)]
@@ -229,15 +230,13 @@ pub fn main_fs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
     output: &mut Vec4,
 ) {
-    if in_frag_coord.x as u32 >= constants.width || in_frag_coord.y as u32 >= constants.height {
+    let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
+    if is_inside_bounds(position, constants) {
+        let pixel = get_pixel(trail_buffer, constants, position.as_uvec2());
+        *output = vec4(pixel.x_frac(), 0.0, pixel.y_frac(), 1.0)
+    } else {
         *output = vec4(1.0, 1.0, 1.0, 1.0);
-        return;
     }
-    let index = in_frag_coord.y as usize * constants.width as usize + in_frag_coord.x as usize;
-
-    let pixel = pixel_view(&mut trail_buffer[index]);
-    // *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
-    *output = vec4(pixel.x_frac(), 0.0, pixel.y_frac(), 1.0)
 }
 
 #[spirv(vertex)]

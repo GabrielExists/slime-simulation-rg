@@ -218,16 +218,8 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     x * x * (3.0 - 2.0 * x)
 }
 
-// fn vec_from_u32(storage: &mut u32) -> &mut UVec2 {
-//     from_bytes_mut::<UVec2>(bytemuck::bytes_of_mut(storage))
-// }
-
 pub struct PixelView<'storage> {
     storage: &'storage mut u32,
-}
-
-pub fn pixel_view(storage: &mut u32) -> PixelView<'_> {
-    PixelView::new(storage)
 }
 
 impl<'storage> PixelView<'storage> {
