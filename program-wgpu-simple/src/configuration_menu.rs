@@ -4,7 +4,8 @@ use egui::{Slider, Ui};
 use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::Globals;
-use shared::{AgentStatsAll, ClickMode, DEFAULT_DISTANCE, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
+use crate::configuration::DEFAULT_DISTANCE;
+use shared::{AgentStatsAll, ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
 
 pub struct ConfigurationValues {
     pub globals: Globals,

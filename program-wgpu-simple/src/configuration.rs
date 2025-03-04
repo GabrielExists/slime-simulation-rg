@@ -1,14 +1,9 @@
 use shared::*;
 
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircleFacingInwards {
-//     max_distance: 250.0,
-// };
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::EvenlyDistributed;
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CenterFacingOutwards;
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingInward { distance: 220.0 };
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingOutward { distance: 170.0 };
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingRandom { distance: 220.0 };
-// pub const SPAWN_MODE: SpawnMode = SpawnMode::CircumferenceFacingClockwise { distance: 220.0 };
+pub const DEFAULT_WIDTH: u32 = 800;
+pub const DEFAULT_HEIGHT: u32 = 480;
+pub const DEFAULT_DISTANCE: u32 = 170;
+
 pub struct Globals {
     pub fixed_delta_time: f32,
     pub time_scale: f32,
@@ -29,7 +24,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
         shader_stats: AgentStats {
             velocity: 65.0,
             pixel_addition: 1.0 / 5.0,
-            turn_speed: 50.0,
+            turn_speed: 80.0,
             turn_speed_avoidance: 30.0,
             avoidance_threshold: 20.0,
             sensor_angle_spacing: 60.0,
@@ -45,7 +40,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
         shader_stats: AgentStats {
             velocity: 65.0,
             pixel_addition: 1.0 / 5.0,
-            turn_speed: 50.0,
+            turn_speed: 80.0,
             turn_speed_avoidance: 30.0,
             avoidance_threshold: 20.0,
             sensor_angle_spacing: 60.0,
@@ -70,8 +65,4 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         evaporation_speed: 50.0,
         diffusion_speed: 180.0,
     },
-    // TrailStats {
-    //     evaporation_speed: 50.0,
-    //     diffusion_speed: 180.0,
-    // },
 ];

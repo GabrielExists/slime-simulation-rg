@@ -44,10 +44,6 @@ pub enum SpawnMode {
     },
 }
 
-pub const DEFAULT_WIDTH: u32 = 800;
-pub const DEFAULT_HEIGHT: u32 = 800;
-pub const DEFAULT_DISTANCE: u32 = 170;
-
 #[cfg(not(target_arch = "spirv"))]
 impl Display for SpawnMode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -240,10 +236,8 @@ impl<'storage> PixelView<'storage> {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 0 & 0x7FFF }
-    // 15
-    pub fn y(&self) -> u32 { *self.storage >> 15 & 0x7FFF }
-    // 15
+    pub fn x(&self) -> u32 { *self.storage >> 0 & 0xFFFF }
+    pub fn y(&self) -> u32 { *self.storage >> 16 & 0xFFFF }
     // pub fn z(&self) -> u32 { *self.storage >> 0 & 0x3 } // 2
     pub fn get(&self, index: usize) -> u32 {
         match index {
@@ -259,10 +253,10 @@ impl<'storage> PixelView<'storage> {
         frac_from_int(self.get(index))
     }
     pub fn set_x(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xFFFF8000 | (value & 0x7FFF) << 0; // 15
+        *self.storage = *self.storage & 0xFFFF0000 | (value & 0xFFFF) << 0;
     }
     pub fn set_y(&mut self, value: u32) {
-        *self.storage = *self.storage & 0xC0007FFF | ((value & 0x7FFF) << 15); // 15
+        *self.storage = *self.storage & 0x0000FFFF | ((value & 0xFFFF) << 16);
     }
     // pub fn set_z(&mut self, value: u32) {
     //     *self.storage = *self.storage & 0xFFFFFF00 | ((value & 0xFF) << 0); // 8
@@ -325,7 +319,7 @@ impl<'storage> PixelView<'storage> {
 // }
 
 
-pub const PIXEL_MAX: u32 = 2u32.pow(15) - 1;
+pub const PIXEL_MAX: u32 = 2u32.pow(16) - 1;
 
 pub fn frac_from_int(value: u32) -> f32 {
     value as f32 / PIXEL_MAX as f32
