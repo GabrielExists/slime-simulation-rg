@@ -113,8 +113,8 @@ pub fn main_cs(
         };
     };
     if let Bounds::OutsideBounds = bounds {
-        step_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, step_x));
-        step_y = f32::min(constants.height as f32 - 0.01, f32::max(0.0, step_y));
+        step_x = f32::min(constants.width as f32 - 1.01, f32::max(0.0, step_x));
+        step_y = f32::min(constants.height as f32 - 1.01, f32::max(0.0, step_y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
 

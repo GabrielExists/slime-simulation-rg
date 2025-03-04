@@ -19,7 +19,7 @@ pub const GLOBALS: Globals = Globals {
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
         name: "Red",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 50 },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -37,7 +37,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Green",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 100 },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -55,7 +55,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Blue",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 150 },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -73,7 +73,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Gray",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 200 },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
