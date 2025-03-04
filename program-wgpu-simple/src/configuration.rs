@@ -11,14 +11,14 @@ pub struct Globals {
     pub click_mode: ClickMode,
 }
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0/120.0,
+    fixed_delta_time: 1.0/60.0,
     time_scale: 1.0,
     compute_steps_per_render: 1,
     click_mode: ClickMode::Disabled,
 };
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
-        name: "Green",
+        name: "Red",
         spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE },
         num_agents: 4000,
         shader_stats: AgentStats {
@@ -52,7 +52,7 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
 ];
 
 pub const TRAIL_NAMES: [&'static str; NUM_TRAIL_STATS] = [
-    "Green",
+    "Red",
     "Blue",
 ];
 

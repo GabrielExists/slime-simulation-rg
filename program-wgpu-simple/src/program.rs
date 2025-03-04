@@ -5,10 +5,9 @@ use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseButton, WindowEvent};
-use crate::configuration_menu::render_configuration_menu;
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
-use shared::{ClickMode, ClickModeEncoded, ShaderConstants};
+use shared::{ClickMode, ShaderConstants};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::slot_egui::SlotEgui;
@@ -149,8 +148,8 @@ impl Program<'_> {
             let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.8..1.2);
             if delta_time < fixed_delta_time {
                 thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
-                delta_time = fixed_delta_time;
             }
+            delta_time = fixed_delta_time;
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
@@ -178,14 +177,14 @@ impl Program<'_> {
         let consumed = self.slot_egui.handle_input(&self.program_init.window, &event);
         if !consumed {
             match event {
-                WindowEvent::CursorMoved { device_id, position } => {
+                WindowEvent::CursorMoved { device_id: _, position } => {
                     self.mouse_position = (position.x as f32, position.y as f32);
                 }
-                WindowEvent::CursorEntered { device_id } => {
+                WindowEvent::CursorEntered { device_id: _ } => {
                 }
-                WindowEvent::CursorLeft { device_id } => {
+                WindowEvent::CursorLeft { device_id: _ } => {
                 }
-                WindowEvent::MouseInput{ device_id, state, button }  => {
+                WindowEvent::MouseInput{ device_id: _, state, button }  => {
                     println!("Button press {:?} {:?}", button, state);
                     if let MouseButton::Left = button{
                         match state {

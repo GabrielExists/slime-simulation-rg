@@ -176,6 +176,7 @@ pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderCons
 fn is_inside_bounds(position: IVec2, constants: &ShaderConstants) -> bool {
     position.x > 0 && position.x < constants.width as i32 && position.y > 0 && position.y < constants.height as i32
 }
+
 fn _is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
     position.x > 0 && position.x < constants.width as u32 && position.y > 0 && position.y < constants.height as u32
 }
@@ -236,7 +237,7 @@ pub fn main_fs(
 
     let pixel = pixel_view(&mut trail_buffer[index]);
     // *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
-    *output = vec4(0.0, pixel.x_frac(), pixel.y_frac(), 1.0)
+    *output = vec4(pixel.x_frac(), 0.0, pixel.y_frac(), 1.0)
 }
 
 #[spirv(vertex)]

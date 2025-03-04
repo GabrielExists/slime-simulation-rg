@@ -69,12 +69,12 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         ui.separator();
                         ui.label("Applies on reset:");
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
-                        ui.add(Slider::new(&mut agent_stats.num_agents, 5..=10000)
+                        ui.add(Slider::new(&mut agent_stats.num_agents, 5..=1000000)
                             .text("Num agents").logarithmic(true));
                         ComboBox::from_label("Spawn mode")
                             .selected_text(format!("{}", spawn))
                             .show_ui(ui, |ui| {
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::EvenlyDistributed), SpawnMode::CenterFacingOutward {});
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::EvenlyDistributed), SpawnMode::EvenlyDistributed {});
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CenterFacingOutward {}), SpawnMode::CenterFacingOutward {});
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::PointFacingOutward {..}), SpawnMode::PointFacingOutward { x: 100, y: 100 });
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircleFacingInward {..}), SpawnMode::CircleFacingInward {
