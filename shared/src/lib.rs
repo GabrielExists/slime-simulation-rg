@@ -226,7 +226,7 @@ pub struct PixelView<'storage> {
     storage: &'storage mut u32,
 }
 
-pub fn pixel_view(storage: &mut u32) -> PixelView {
+pub fn pixel_view(storage: &mut u32) -> PixelView<'_> {
     PixelView::new(storage)
 }
 

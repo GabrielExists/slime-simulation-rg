@@ -1,4 +1,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
+#![deny(warnings)]
+
+extern crate spirv_std;
 
 mod lerp_test;
 
@@ -6,6 +9,7 @@ use core::f32::consts::PI;
 use glam::{Vec2, Vec4, vec2, UVec3, vec4};
 use shared::*;
 use spirv_std::{glam, spirv};
+use spirv_std::glam::{IVec2, ivec2, UVec2};
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
 // we tie #[no_std] above to the same condition, so it's fine.
 #[cfg(target_arch = "spirv")]
@@ -84,7 +88,7 @@ pub fn main_cs(
         while num_steps > step {
             step_x = step_x + agent.angle.cos() * step;
             step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
+            let bounds = set_pixel(trail_buffer, constants, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -98,14 +102,14 @@ pub fn main_cs(
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
         if previous_x as i32 != step_x as i32 || previous_y as i32 != step_y as i32 {
-            let bounds = set_pixel(trail_buffer, constants, &agent_stats, &vec2(step_x, step_y), agent.channel_index as usize);
+            let bounds = set_pixel(trail_buffer, constants, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
             break 'clamp_block bounds;
         }
-        break 'clamp_block if is_inside_bounds(&vec2(step_x, step_y), constants) {
+        break 'clamp_block if is_inside_bounds(ivec2(step_x as i32, step_y as i32), constants) {
             Bounds::InsideBounds
         } else {
             Bounds::OutsideBounds
-        }
+        };
     };
     if let Bounds::OutsideBounds = bounds {
         step_x = f32::min(constants.width as f32 - 0.01, f32::max(0.0, step_x));
@@ -119,19 +123,20 @@ pub fn main_cs(
 
 fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
     let sensor_angle = agent.angle + angle_offset;
-    let sensor_center_x = agent.x + sensor_angle.cos() * agent_stats.sensor_offset;
-    let sensor_center_y = agent.y + sensor_angle.sin() * agent_stats.sensor_offset;
+    let sensor_center = ivec2(
+        (agent.x + sensor_angle.cos() * agent_stats.sensor_offset) as i32,
+        (agent.y + sensor_angle.sin() * agent_stats.sensor_offset) as i32,
+    );
     let mut sum = 0.0;
 
     for offset_x in -1..=1 {
         for offset_y in -1..=1 {
-            let pos_x = sensor_center_x + offset_x as f32;
-            let pos_y = sensor_center_y + offset_y as f32;
+            let pos = sensor_center + ivec2(offset_x, offset_y);
 
-            if is_inside_bounds(&vec2(pos_x, pos_y), constants) {
-                let index = pos_y as usize * constants.width as usize + pos_x as usize;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(0) * agent_stats.attraction_channel_one;
-                sum += pixel_view(&mut trail_buffer[index]).get_frac(1) * agent_stats.attraction_channel_two;
+            if is_inside_bounds(pos, constants) {
+                let pixel = get_pixel(trail_buffer, constants, pos.as_uvec2());
+                sum += pixel.get_frac(0) * agent_stats.attraction_channel_one;
+                sum += pixel.get_frac(1) * agent_stats.attraction_channel_two;
             }
         }
     }
@@ -143,10 +148,9 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 }
 
 
-fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: &Vec2, channel_index: usize) -> Bounds {
+fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: IVec2, channel_index: usize) -> Bounds {
     if is_inside_bounds(position, constants) {
-        let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
-        let mut pixel = pixel_view(&mut trail_buffer[pixel_index]);
+        let mut pixel = get_pixel(trail_buffer, constants, position.as_uvec2());
         let mut value_frac = pixel.get_frac(channel_index) as f32;
         value_frac += agent_stats.pixel_addition;
         pixel.set_frac(channel_index, f32::min(value_frac, 1.0));
@@ -156,8 +160,24 @@ fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats:
     }
 }
 
-fn is_inside_bounds(position: &Vec2, constants: &ShaderConstants) -> bool {
-    position.x > 0.0 && position.x < constants.width as f32 && position.y > 0.0 && position.y < constants.height as f32
+/// rust-gpu does not support returning a reference in an option it seems.
+/// As a workaround, it is the callers responsibility to make sure position is within bounds
+pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderConstants, position: UVec2) -> PixelView<'pixel> {
+    // if is_inside_bounds(position, constants) {
+    let pixel_index = position.y as usize * constants.width as usize + position.x as usize;
+    // Some(
+    pixel_view(&mut trail_buffer[pixel_index])
+    // )
+    // } else {
+    //     None
+    // }
+}
+
+fn is_inside_bounds(position: IVec2, constants: &ShaderConstants) -> bool {
+    position.x > 0 && position.x < constants.width as i32 && position.y > 0 && position.y < constants.height as i32
+}
+fn _is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
+    position.x > 0 && position.x < constants.width as u32 && position.y > 0 && position.y < constants.height as u32
 }
 
 
@@ -179,11 +199,13 @@ pub fn diffuse_cs(
     let mut sum = 0.0;
     for offset_x in -1..=1 {
         for offset_y in -1..=1 {
-            let sample_x = id.x as i32 + offset_x;
-            let sample_y = id.y as i32 + offset_y;
-            if sample_x >= 0 && sample_x < constants.width as i32 && sample_y >= 0 && sample_y < constants.height as i32 {
-                let sample_index: usize = sample_y as usize * constants.width as usize + sample_x as usize;
-                sum += pixel_view(&mut trail_buffer[sample_index]).get_frac(channel_index);
+            let sample_pos = ivec2(
+                id.x as i32 + offset_x,
+                id.y as i32 + offset_y,
+            );
+            if is_inside_bounds(sample_pos, constants) {
+                let pixel = get_pixel(trail_buffer, constants, sample_pos.as_uvec2());
+                sum += pixel.get_frac(channel_index);
             }
         }
     }
