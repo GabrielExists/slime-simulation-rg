@@ -69,6 +69,8 @@ impl Program<'_> {
             scale_factor: 1.0,
             show_menu: true,
             respawn: false,
+            reset_trails: false,
+            playing: true,
         };
         let program_buffers = Self::create_buffers(&program_init);
         let slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
@@ -118,6 +120,12 @@ impl Program<'_> {
     }
 
     pub(crate) fn on_loop(&mut self, output: &mut SurfaceTexture, start: &Instant, last_time: &mut Instant) {
+        if self.configuration.reset_trails {
+            self.configuration.reset_trails = false;
+            let bytes = Self::bytes_from_trail_map_size(self.program_buffers.screen_size);
+            self.program_init.queue.write_buffer(&self.program_buffers.trail_buffer, 0, &bytes);
+            self.program_init.queue.submit([]);
+        }
         let time = start.elapsed().as_secs_f32();
         let delta_time = last_time.elapsed().as_secs_f32();
         if delta_time < self.configuration.globals.delta_time {
@@ -134,9 +142,11 @@ impl Program<'_> {
             output,
             push_constants,
         };
-        for _ in 0..self.configuration.globals.compute_steps_per_render {
-            self.slot_agents.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
-            self.slot_diffuse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
+        if self.configuration.playing {
+            for _ in 0..self.configuration.globals.compute_steps_per_render {
+                self.slot_agents.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
+                self.slot_diffuse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
+            }
         }
         self.slot_render.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
         self.slot_egui.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);

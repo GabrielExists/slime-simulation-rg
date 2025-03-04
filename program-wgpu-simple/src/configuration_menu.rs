@@ -13,6 +13,8 @@ pub struct ConfigurationValues {
     pub scale_factor: f32,
     pub show_menu: bool,
     pub respawn: bool,
+    pub reset_trails: bool,
+    pub playing: bool,
 }
 
 pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues) {
@@ -29,13 +31,16 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     if ui.button("Respawn").clicked() {
                         configuration.respawn = true;
                     }
-                    // if ui.button("Reset trails").clicked() {
-                    //     configuration.reset_trails = true;
-                    // }
-                    // if ui.button("Respawn and reset trails").clicked() {
-                    //     configuration.respawn = true;
-                    //     configuration.reset_trails = true;
-                    // }
+                    if ui.button("Reset trails").clicked() {
+                        configuration.reset_trails = true;
+                    }
+                    if ui.button("Respawn and reset trails").clicked() {
+                        configuration.respawn = true;
+                        configuration.reset_trails = true;
+                    }
+                    if ui.button(if configuration.playing {"Pause"} else {"Resume"}).clicked() {
+                        configuration.playing = !configuration.playing;
+                    }
                 });
                 for agent_stats in configuration.agent_stats.iter_mut() {
                     let spawn = &mut agent_stats.spawn_mode;
