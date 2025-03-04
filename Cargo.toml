@@ -21,6 +21,7 @@ unexpected_cfgs = { level = "allow", check-cfg = ['cfg(target_arch, values("spir
 [workspace.dependencies]
 spirv-builder = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
 spirv-std = { git = "https://github.com/rust-gpu/rust-gpu", rev = "6e2c84d4fe64e32df4c060c5a7f3e35a32e45421" }
+bytemuck = { version = "1.22.0" }
 
 [profile.release.build-override]
 opt-level = 3

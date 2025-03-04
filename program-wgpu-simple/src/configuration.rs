@@ -13,11 +13,13 @@ pub struct Globals {
     pub delta_time: f32,
     pub time_scale: f32,
     pub compute_steps_per_render: u32,
+    pub click_mode: ClickMode,
 }
 pub const GLOBALS: Globals = Globals {
     delta_time: 1.0/60.0,
     time_scale: 1.0,
     compute_steps_per_render: 1,
+    click_mode: ClickMode::Disabled,
 };
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {

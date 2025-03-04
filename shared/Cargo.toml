@@ -11,4 +11,4 @@ workspace = true
 
 [dependencies]
 spirv-std = { workspace = true }
-bytemuck = { version = "1.18.0", features = ["derive"] }
+bytemuck = { workspace = true, features = ["derive"] }

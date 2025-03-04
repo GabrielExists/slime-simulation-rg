@@ -6,7 +6,7 @@ use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
 use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
-use shared::ShaderConstants;
+use shared::{ClickMode, ClickModeEncoded, ShaderConstants};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::slot_egui::SlotEgui;
@@ -133,6 +133,7 @@ impl Program<'_> {
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
+            click_mode: self.configuration.globals.click_mode.encode(),
             width: self.program_buffers.screen_size.width,
             height: self.program_buffers.screen_size.height,
             time,
@@ -153,7 +154,10 @@ impl Program<'_> {
     }
 
     pub(crate) fn handle_input(&mut self, event: &WindowEvent) {
-        self.slot_egui.handle_input(&self.program_init.window, &event);
+        let consumed = self.slot_egui.handle_input(&self.program_init.window, &event);
+        if !consumed {
+
+        }
     }
 
     pub fn bytes_from_trail_map_size(size: PhysicalSize<u32>) -> Vec<u8> {

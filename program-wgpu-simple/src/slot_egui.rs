@@ -113,7 +113,8 @@ impl Slot for SlotEgui {
 }
 
 impl SlotEgui {
-    pub fn handle_input(&mut self, window: &winit::window::Window, event: &WindowEvent) {
-        let _ = self.state.on_window_event(window, event);
+    pub fn handle_input(&mut self, window: &winit::window::Window, event: &WindowEvent) -> bool{
+        let event_response = self.state.on_window_event(window, event);
+        event_response.consumed
     }
 }

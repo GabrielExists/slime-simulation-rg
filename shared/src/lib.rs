@@ -2,6 +2,8 @@
 
 #![cfg_attr(target_arch = "spirv", no_std)]
 
+extern crate bytemuck;
+
 #[cfg(not(target_arch = "spirv"))]
 use std::fmt::{Display, Formatter};
 use core::f32::consts::PI;
@@ -41,6 +43,7 @@ pub enum SpawnMode {
         distance: u32,
     },
 }
+
 pub const DEFAULT_WIDTH: u32 = 800;
 pub const DEFAULT_HEIGHT: u32 = 480;
 pub const DEFAULT_DISTANCE: u32 = 170;
@@ -60,6 +63,7 @@ impl Display for SpawnMode {
         }
     }
 }
+
 impl SpawnMode {
     pub fn distance(&self) -> Option<u32> {
         match self {
@@ -75,10 +79,62 @@ impl SpawnMode {
     }
 }
 
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub enum ClickMode {
+    Disabled,
+    ShowMenu,
+    PaintTrail(u32),
+    ResetTrail(u32),
+    ResetAllTrails,
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl Display for ClickMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClickMode::Disabled => f.write_str("Disabled"),
+            ClickMode::ShowMenu => f.write_str("Show menu"),
+            ClickMode::PaintTrail(_) => f.write_str("Paint trail"),
+            ClickMode::ResetTrail(_) => f.write_str("Reset trail"),
+            ClickMode::ResetAllTrails => f.write_str("Reset all trails"),
+        }
+    }
+}
+impl ClickMode {
+    pub fn encode(self) -> ClickModeEncoded {
+        let number = match self {
+            ClickMode::Disabled => 0,
+            ClickMode::ShowMenu => 1,
+            ClickMode::PaintTrail(trail_index) => 256 + trail_index,
+            ClickMode::ResetTrail(trail_index) => 512 + trail_index,
+            ClickMode::ResetAllTrails => 2,
+        };
+        ClickModeEncoded(number)
+    }
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct ClickModeEncoded(u32);
+
+impl ClickModeEncoded {
+    pub fn decode(self) -> ClickMode {
+        match self.0 {
+            0 => ClickMode::Disabled,
+            1 => ClickMode::ShowMenu,
+            2 => ClickMode::ResetAllTrails,
+            trail_index @ 256..=511 => ClickMode::PaintTrail(trail_index - 256),
+            trail_index @ 512..=767 => ClickMode::ResetTrail(trail_index - 512),
+            _ => ClickMode::Disabled
+        }
+    }
+}
 
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
+    pub click_mode: ClickModeEncoded,
     pub width: u32,
     pub height: u32,
     pub time: f32,
@@ -184,8 +240,10 @@ impl<'storage> PixelView<'storage> {
             storage,
         }
     }
-    pub fn x(&self) -> u32 { *self.storage >> 0 & 0x7FFF } // 15
-    pub fn y(&self) -> u32 { *self.storage >> 15 & 0x7FFF } // 15
+    pub fn x(&self) -> u32 { *self.storage >> 0 & 0x7FFF }
+    // 15
+    pub fn y(&self) -> u32 { *self.storage >> 15 & 0x7FFF }
+    // 15
     // pub fn z(&self) -> u32 { *self.storage >> 0 & 0x3 } // 2
     pub fn get(&self, index: usize) -> u32 {
         match index {
@@ -307,5 +365,21 @@ mod test {
         assert!(f32::abs(view.x_frac() - 0.5) < 0.01);
         assert!(f32::abs(view.y_frac() - 0.25) < 0.01);
         // assert_eq!(view.z_frac(), 0.125);
+    }
+
+    #[cfg(test)]
+    #[test]
+    fn test_click_mode_encoding() {
+        for value in 0..u16::MAX as u32 {
+            let reference = ClickModeEncoded(value);
+            let click_mode = reference.decode();
+            let encoded = click_mode.encode();
+            match click_mode {
+                ClickMode::Disabled => {}
+                _ => {
+                    assert_eq!(reference.0, encoded.0)
+                }
+            }
+        }
     }
 }

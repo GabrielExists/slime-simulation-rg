@@ -4,7 +4,7 @@ use egui::{Slider, Ui};
 use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::Globals;
-use shared::{AgentStatsAll, DEFAULT_DISTANCE, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
+use shared::{AgentStatsAll, ClickMode, DEFAULT_DISTANCE, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
 
 pub struct ConfigurationValues {
     pub globals: Globals,
@@ -38,7 +38,7 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         configuration.respawn = true;
                         configuration.reset_trails = true;
                     }
-                    if ui.button(if configuration.playing {"Pause"} else {"Resume"}).clicked() {
+                    if ui.button(if configuration.playing { "Pause" } else { "Resume" }).clicked() {
                         configuration.playing = !configuration.playing;
                     }
                 });
@@ -69,66 +69,23 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         ui.add(Slider::new(&mut agent_stats.num_agents, 5..=10000)
                             .text("Num agents").logarithmic(true));
                         ComboBox::from_label("Spawn mode")
-                            .selected_text(format!("{spawn}"))
+                            .selected_text(format!("{}", spawn))
                             .show_ui(ui, |ui| {
-                                let new_value = SpawnMode::EvenlyDistributed {};
-                                let predicate = |mode: &SpawnMode| if let SpawnMode::EvenlyDistributed { .. } = mode {
-                                        true
-                                    } else { false };
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    predicate,
-                                    new_value);
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::EvenlyDistributed { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::EvenlyDistributed {});
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::CenterFacingOutward { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::CenterFacingOutward {});
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::PointFacingOutward { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::PointFacingOutward { x: 100, y: 100 });
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::CircleFacingInward { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::CircleFacingInward { max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::CircumferenceFacingOutward { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::CircumferenceFacingOutward { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::CircumferenceFacingRandom { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::CircumferenceFacingRandom { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
-                                selectable_value_pred(
-                                    ui,
-                                    spawn,
-                                    |mode| if let SpawnMode::CircumferenceFacingClockwise { .. } = mode {
-                                        true
-                                    } else { false },
-                                    SpawnMode::CircumferenceFacingClockwise { distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE) });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::EvenlyDistributed), SpawnMode::CenterFacingOutward {});
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CenterFacingOutward {}), SpawnMode::CenterFacingOutward {});
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::PointFacingOutward {..}), SpawnMode::PointFacingOutward { x: 100, y: 100 });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircleFacingInward {..}), SpawnMode::CircleFacingInward {
+                                    max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingOutward {..}), SpawnMode::CircumferenceFacingOutward {
+                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingRandom {..}), SpawnMode::CircumferenceFacingRandom {
+                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingClockwise {..}), SpawnMode::CircumferenceFacingClockwise {
+                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                });
                             });
                         let width = screen_size.width;
                         let height = screen_size.height;
@@ -189,6 +146,27 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         configuration.scale_factor = (configuration.scale_factor + 0.1).min(3.0);
                     }
                 });
+                let click_mode = &mut configuration.globals.click_mode;
+                ComboBox::from_label("Click mode")
+                    .selected_text(format!("{}", click_mode))
+                    .show_ui(ui, |ui| {
+                        selectable_value_pred(ui, click_mode, |mode| matches!(mode, ClickMode::Disabled), ClickMode::Disabled);
+                        selectable_value_pred(ui, click_mode, |mode| matches!(mode, ClickMode::ShowMenu), ClickMode::ShowMenu);
+                        selectable_value_pred(ui, click_mode, |mode| matches!(mode, ClickMode::PaintTrail(_)), ClickMode::PaintTrail(0));
+                        selectable_value_pred(ui, click_mode, |mode| matches!(mode, ClickMode::ResetTrail(_)), ClickMode::ResetTrail(0));
+                        selectable_value_pred(ui, click_mode, |mode| matches!(mode, ClickMode::ResetAllTrails), ClickMode::ResetAllTrails);
+                    });
+                match click_mode {
+                    ClickMode::PaintTrail(trail_index) => {
+                        ui.add(Slider::new(trail_index, 0..=NUM_TRAIL_STATS as u32 - 1)
+                            .text("Trail index"));
+                    }
+                    ClickMode::ResetTrail(trail_index) => {
+                        ui.add(Slider::new(trail_index, 0..=NUM_TRAIL_STATS as u32 - 1)
+                            .text("Trail index"));
+                    }
+                    _ => {}
+                }
             });
     }
 }
