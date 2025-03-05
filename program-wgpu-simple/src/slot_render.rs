@@ -1,4 +1,4 @@
-use crate::configuration_menu::ConfigurationValues;
+use crate::configuration::ConfigurationValues;
 use shared::ShaderConstants;
 use crate::program::*;
 

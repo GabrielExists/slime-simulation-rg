@@ -3,6 +3,7 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 extern crate bytemuck;
+extern crate spirv_std;
 
 #[cfg(not(target_arch = "spirv"))]
 use std::fmt::{Display, Formatter};
@@ -17,8 +18,9 @@ use spirv_std::glam;
 use spirv_std::num_traits::Float;
 
 use bytemuck::{Pod, Zeroable};
+use spirv_std::glam::Vec2;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum SpawnMode {
     EvenlyDistributed,
     CenterFacingOutward,
@@ -46,13 +48,14 @@ pub enum SpawnMode {
     },
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct SpawnBox {
     pub left: u32,
     pub top: u32,
     pub box_width: u32,
     pub box_height: u32,
 }
+
 impl Default for SpawnBox {
     fn default() -> Self {
         Self {
@@ -103,7 +106,7 @@ impl SpawnMode {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub enum ClickMode {
     Disabled,
@@ -160,13 +163,16 @@ impl ClickModeEncoded {
 #[repr(C)]
 pub struct ShaderConstants {
     pub click_mode: ClickModeEncoded,
+    pub mouse_down: u32,
+    pub mouse_position: Vec2,
+    pub last_mouse_position: Vec2,
     pub width: u32,
     pub height: u32,
     pub time: f32,
     pub delta_time: f32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct AgentStatsAll {
     pub name: &'static str,
     pub spawn_mode: SpawnMode,
@@ -176,7 +182,7 @@ pub struct AgentStatsAll {
 
 pub const NUM_AGENT_TYPES: usize = 4;
 
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
     // Pixels travelled per second
@@ -199,7 +205,7 @@ pub struct AgentStats {
 pub const NUM_TRAIL_STATS: usize = 4;
 pub const INTS_PER_PIXEL: u32 = NUM_TRAIL_STATS.div_ceil(2) as u32;
 
-#[derive(Copy, Clone, Pod, Zeroable)]
+#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
 #[repr(C)]
 pub struct TrailStats {
     // Percent of full white to black transition per second.
@@ -324,7 +330,8 @@ impl<'storage> PixelView<'storage> {
 }
 
 
-pub const PIXEL_MAX: u32 = 2u32.pow(16) - 1;
+
+pub const PIXEL_MAX: u32 = 2u32.pow(15) - 1;
 
 pub fn frac_from_int(value: u32) -> f32 {
     value as f32 / PIXEL_MAX as f32
@@ -372,7 +379,6 @@ mod test {
         assert!(f32::abs(pixel.w_frac() - 0.125) < 0.01);
     }
 
-    #[cfg(test)]
     #[test]
     fn test_click_mode_encoding() {
         for value in 0..u16::MAX as u32 {

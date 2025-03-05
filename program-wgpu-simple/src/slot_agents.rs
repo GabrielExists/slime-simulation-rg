@@ -1,5 +1,5 @@
 use winit::dpi::PhysicalSize;
-use crate::configuration_menu::ConfigurationValues;
+use crate::configuration::ConfigurationValues;
 use rand::Rng;
 use shared::{AgentStatsAll, ShaderConstants, SpawnBox, SpawnMode};
 use crate::program::*;
@@ -147,26 +147,26 @@ impl Slot for SlotAgents {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
-
         // Update buffers
-        let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
-        program_init.queue.write_buffer(&self.init.agent_stats_buffer, 0, &agent_stats_bytes);
-        if configuration.respawn {
-            configuration.respawn = false;
-            let mut num_agents = 0;
-            let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
-            let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Agent buffer recreated"),
-                contents: &agent_bytes,
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_DST
-                    | wgpu::BufferUsages::COPY_SRC,
-            });
-            self.init.agents_buffer = agent_buffer;
-            self.init.num_agents = num_agents;
-            self.recreate_buffers(program_init, program_buffers);
+        if configuration.shader_config_changed {
+            let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
+            program_init.queue.write_buffer(&self.init.agent_stats_buffer, 0, &agent_stats_bytes);
+            if configuration.respawn {
+                configuration.respawn = false;
+                let mut num_agents = 0;
+                let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
+                let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Agent buffer recreated"),
+                    contents: &agent_bytes,
+                    usage: wgpu::BufferUsages::STORAGE
+                        | wgpu::BufferUsages::COPY_DST
+                        | wgpu::BufferUsages::COPY_SRC,
+                });
+                self.init.agents_buffer = agent_buffer;
+                self.init.num_agents = num_agents;
+                self.recreate_buffers(program_init, program_buffers);
+            }
         }
-        program_init.queue.submit([]);
 
         // Run compute pass
         let mut encoder =
@@ -288,7 +288,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 channel_index,
             }
         }
-        SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height }} => {
+        SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
             shared::Agent {
                 x: rand::rng().random_range(*left as f32..*left as f32 + *box_width as f32),
                 y: rand::rng().random_range(*top as f32..*top as f32 + *box_height as f32),

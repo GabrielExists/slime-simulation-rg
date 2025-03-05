@@ -1,5 +1,4 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
-#![deny(warnings)]
 
 extern crate spirv_std;
 extern crate core;
@@ -15,6 +14,7 @@ use spirv_std::glam::{IVec2, ivec2, UVec2, uvec2};
 // we tie #[no_std] above to the same condition, so it's fine.
 #[cfg(target_arch = "spirv")]
 use spirv_std::num_traits::Float;
+use spirv_std::num_traits::Pow;
 
 enum Bounds {
     InsideBounds,
@@ -195,18 +195,49 @@ pub fn diffuse_cs(
     #[spirv(push_constant)] constants: &ShaderConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_stats: &[TrailStats],
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] output_buffer: &mut [u32],
 ) {
     let pos = uvec2(id.x, id.y);
     if !is_inside_bounds_u(pos, constants) {
         return;
     }
     let channel_index = id.z as usize;
-    if channel_index >= NUM_AGENT_TYPES {
+    if channel_index >= NUM_TRAIL_STATS {
         return;
     }
     let diffusion_speed = trail_stats[channel_index].diffusion_speed;
     let evaporation_speed = trail_stats[channel_index].evaporation_speed;
 
+    let painting: Option<f32> = match (constants.mouse_down, constants.click_mode.decode()) {
+        (0, _) => {
+            None
+        }
+        (_, ClickMode::PaintTrail(paint_channel)) => {
+            if paint_channel == channel_index as u32 {
+                Some(1.0)
+            } else {
+                None
+            }
+        }
+        (_, ClickMode::ResetTrail(reset_channel)) => {
+            if reset_channel == channel_index as u32 {
+                Some(0.0)
+            } else {
+                None
+            }
+        }
+        (_, ClickMode::ResetAllTrails) => {
+            Some(0.0)
+        }
+        _ => None
+    };
+    if let Some(paint_target) = painting {
+        if within_range(pos.as_vec2(), constants.mouse_position, 5.0) {
+            let mut output_pixel = get_pixel(output_buffer, constants, pos);
+            output_pixel.set_frac(channel_index, paint_target);
+            return;
+        }
+    }
     let mut sum = 0.0;
     for offset_x in -1..=1 {
         for offset_y in -1..=1 {
@@ -217,18 +248,26 @@ pub fn diffuse_cs(
             }
         }
     }
-    let mut pixel = get_pixel(trail_buffer, constants, pos);
+
+    let mut output_pixel = get_pixel(output_buffer, constants, pos);
+    let previous_value = output_pixel.get_frac(channel_index);
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
-        pixel.get_frac(channel_index),
+        previous_value,
         blur_result,
         (diffusion_speed / 100.0) * constants.delta_time,
     );
 
     let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
     let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-    pixel.set_frac(channel_index, new_value);
+    output_pixel.set_frac(channel_index, new_value);
 }
+
+fn within_range(first: Vec2, second: Vec2, distance: f32) -> bool {
+    let square_distance = f32::sqrt((first.x - second.x).pow(2) + (first.y - second.y).pow(2));
+    square_distance < distance.pow(2)
+}
+
 
 #[spirv(fragment)]
 pub fn main_fs(

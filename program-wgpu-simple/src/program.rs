@@ -1,11 +1,12 @@
 use std::thread;
 use std::time::{Duration, Instant};
+use glam::{Vec2, vec2};
+use crate::configuration::ConfigurationValues;
 use rand::Rng;
 use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseButton, WindowEvent};
-use crate::configuration_menu::ConfigurationValues;
 use wgpu::util::DeviceExt;
 use shared::{ClickMode, ShaderConstants, INTS_PER_PIXEL};
 use crate::slot_agents::SlotAgents;
@@ -22,7 +23,7 @@ pub struct Program<'window> {
     slot_egui: SlotEgui,
     configuration: ConfigurationValues,
     mouse_click: Option<ClickStart>,
-    mouse_position: (f32, f32),
+    mouse_position: Vec2,
     first_frame: bool,
 }
 
@@ -39,7 +40,7 @@ pub struct ProgramInit<'window> {
 pub struct ProgramBuffers {
     pub screen_size: PhysicalSize<u32>,
 
-    pub _num_bytes_screen_buffers: usize,
+    pub num_bytes_screen_buffers: usize,
     pub trail_buffer: wgpu::Buffer,
 }
 
@@ -50,8 +51,7 @@ pub struct Frame<'output> {
 }
 
 pub struct ClickStart {
-    x: f32,
-    y: f32,
+    pos: Vec2,
     time: Instant,
 }
 
@@ -73,6 +73,7 @@ pub trait Slot {
 impl Program<'_> {
     pub fn new(program_init: ProgramInit<'_>) -> Program<'_> {
         let configuration = ConfigurationValues {
+            shader_config_changed: false,
             globals: GLOBALS,
             agent_stats: AGENT_STATS,
             trail_stats: TRAIL_STATS,
@@ -96,7 +97,7 @@ impl Program<'_> {
             slot_egui,
             configuration,
             mouse_click: None,
-            mouse_position: (0.0, 0.0),
+            mouse_position: (0.0, 0.0).into(),
             first_frame: true,
         }
     }
@@ -118,7 +119,7 @@ impl Program<'_> {
 
         let buffers = ProgramBuffers {
             screen_size: size,
-            _num_bytes_screen_buffers: num_bytes,
+            num_bytes_screen_buffers: num_bytes,
             trail_buffer,
         };
         buffers
@@ -145,7 +146,7 @@ impl Program<'_> {
             delta_time = 0.0;
             self.first_frame = false;
         } else {
-            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.8..1.2);
+            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
             if delta_time < fixed_delta_time {
                 thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
             }
@@ -154,6 +155,9 @@ impl Program<'_> {
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
             click_mode: self.configuration.globals.click_mode.encode(),
+            mouse_down: self.mouse_click.is_some() as u32,
+            mouse_position: self.mouse_position,
+            last_mouse_position: Default::default(),
             width: self.program_buffers.screen_size.width,
             height: self.program_buffers.screen_size.height,
             time,
@@ -178,20 +182,17 @@ impl Program<'_> {
         if !consumed {
             match event {
                 WindowEvent::CursorMoved { device_id: _, position } => {
-                    self.mouse_position = (position.x as f32, position.y as f32);
+                    self.mouse_position = vec2(position.x as f32, position.y as f32);
                 }
-                WindowEvent::CursorEntered { device_id: _ } => {
-                }
-                WindowEvent::CursorLeft { device_id: _ } => {
-                }
-                WindowEvent::MouseInput{ device_id: _, state, button }  => {
+                WindowEvent::CursorEntered { device_id: _ } => {}
+                WindowEvent::CursorLeft { device_id: _ } => {}
+                WindowEvent::MouseInput { device_id: _, state, button } => {
                     println!("Button press {:?} {:?}", button, state);
-                    if let MouseButton::Left = button{
+                    if let MouseButton::Left = button {
                         match state {
                             ElementState::Pressed => {
                                 let click_start = ClickStart {
-                                    x: self.mouse_position.0,
-                                    y: self.mouse_position.1,
+                                    pos: self.mouse_position,
                                     time: Instant::now(),
                                 };
                                 self.mouse_click = Some(click_start);

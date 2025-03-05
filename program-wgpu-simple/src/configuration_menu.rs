@@ -1,24 +1,14 @@
+use crate::configuration::ConfigurationValues;
 use winit::dpi::PhysicalSize;
 use crate::configuration::TRAIL_NAMES;
 use egui::{Slider, Ui};
 use egui::ComboBox;
 use egui_winit::State;
-use crate::configuration::Globals;
 use crate::configuration::DEFAULT_DISTANCE;
-use shared::{AgentStatsAll, ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode, TrailStats};
-
-pub struct ConfigurationValues {
-    pub globals: Globals,
-    pub agent_stats: [AgentStatsAll; NUM_AGENT_TYPES],
-    pub trail_stats: [TrailStats; NUM_TRAIL_STATS],
-    pub scale_factor: f32,
-    pub show_menu: bool,
-    pub respawn: bool,
-    pub reset_trails: bool,
-    pub playing: bool,
-}
+use shared::{ClickMode, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
 
 pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues) {
+    configuration.shader_config_changed = false;
     if configuration.show_menu {
         egui::Window::new("Configuration")
             .resizable(true)
@@ -145,10 +135,10 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                 }
                 for (trail_index, trail_stats) in configuration.trail_stats.iter_mut().enumerate() {
                     ui.collapsing(format!("Trail {}", TRAIL_NAMES[trail_index]), |ui| {
-                        ui.add(Slider::new(&mut trail_stats.diffusion_speed, 0.0..=1000.0)
-                            .text("Diffusion speed"));
                         ui.add(Slider::new(&mut trail_stats.evaporation_speed, 0.0..=1000.0)
                             .text("Evaporation speed"));
+                        ui.add(Slider::new(&mut trail_stats.diffusion_speed, 0.0..=1000.0)
+                            .text("Diffusion speed"));
                     });
                 }
 

@@ -4,6 +4,21 @@ pub const DEFAULT_WIDTH: u32 = 800;
 pub const DEFAULT_HEIGHT: u32 = 480;
 pub const DEFAULT_DISTANCE: u32 = 170;
 
+#[derive(Clone, PartialEq)]
+pub struct ConfigurationValues {
+    pub globals: Globals,
+    pub agent_stats: [AgentStatsAll; NUM_AGENT_TYPES],
+    pub trail_stats: [TrailStats; NUM_TRAIL_STATS],
+    pub shader_config_changed: bool,
+    // CPU only fields
+    pub scale_factor: f32,
+    pub show_menu: bool,
+    pub respawn: bool,
+    pub reset_trails: bool,
+    pub playing: bool,
+}
+
+#[derive(Clone, PartialEq)]
 pub struct Globals {
     pub fixed_delta_time: f32,
     pub time_scale: f32,
@@ -12,10 +27,10 @@ pub struct Globals {
 }
 
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0 / 60.0,
-    time_scale: 1.0,
+    fixed_delta_time: 1.0 / 120.0,
+    time_scale: 0.2,
     compute_steps_per_render: 1,
-    click_mode: ClickMode::Disabled,
+    click_mode: ClickMode::PaintTrail(0),
 };
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
