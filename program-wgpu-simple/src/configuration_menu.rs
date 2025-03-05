@@ -56,6 +56,10 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             .text(format!("Attraction channel {}", TRAIL_NAMES[0])));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_two, -1.0..=1.0)
                             .text(format!("Attraction channel {}", TRAIL_NAMES[1])));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_three, -1.0..=1.0)
+                            .text(format!("Attraction channel {}", TRAIL_NAMES[2])));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_four, -1.0..=1.0)
+                            .text(format!("Attraction channel {}", TRAIL_NAMES[3])));
                         ui.separator();
                         ui.label("Applies on reset:");
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
@@ -176,6 +180,9 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     }
                     _ => {}
                 }
+                ui.add(Slider::new(&mut configuration.globals.brush_size, 3.0..=100.0)
+                    .logarithmic(true)
+                    .text("Brush size"));
             });
     }
 }

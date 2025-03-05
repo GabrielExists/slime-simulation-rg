@@ -109,6 +109,8 @@ impl Slot for SlotMouse {
             mouse_down: self.mouse_click.is_some() as u32,
             mouse_position: self.mouse_position,
             last_mouse_position: Default::default(),
+            brush_size: configuration.globals.brush_size,
+            _padding: 0.0,
         };
         // Run compute pass
         let mut compute_encoder =

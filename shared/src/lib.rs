@@ -175,6 +175,8 @@ pub struct MouseConstants {
     pub mouse_down: u32,
     pub mouse_position: Vec2,
     pub last_mouse_position: Vec2,
+    pub brush_size: f32,
+    pub _padding: f32,
 }
 
 #[derive(Copy, Clone, PartialEq)]

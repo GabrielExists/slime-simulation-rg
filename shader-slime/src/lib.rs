@@ -237,7 +237,6 @@ pub fn diffuse_cs(
 }
 
 
-const BRUSH_SIZE: u32 = 5;
 #[spirv(compute(threads(8, 8, 1)))]
 pub fn mouse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -249,7 +248,7 @@ pub fn mouse_cs(
         return;
     }
     if mouse_constants.mouse_down != 0 {
-        if within_range(pos.as_vec2(), mouse_constants.mouse_position, BRUSH_SIZE as f32) {
+        if within_range(pos.as_vec2(), mouse_constants.mouse_position, mouse_constants.brush_size as f32) {
             let mut pixel = get_pixel(trail_buffer, mouse_constants.screen_size, pos);
             match mouse_constants.click_mode.decode() {
                 ClickMode::Disabled => {}
