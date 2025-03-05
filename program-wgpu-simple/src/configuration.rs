@@ -10,8 +10,9 @@ pub struct Globals {
     pub compute_steps_per_render: u32,
     pub click_mode: ClickMode,
 }
+
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0/60.0,
+    fixed_delta_time: 1.0 / 60.0,
     time_scale: 1.0,
     compute_steps_per_render: 1,
     click_mode: ClickMode::Disabled,
@@ -19,7 +20,14 @@ pub const GLOBALS: Globals = Globals {
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
         name: "Red",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 50 },
+        spawn_mode: SpawnMode::BoxFacingRandom {
+            spawn_box: SpawnBox {
+                left: 250,
+                top: 75,
+                box_width: 150,
+                box_height: 150,
+            }
+        },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -37,7 +45,14 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Green",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 100 },
+        spawn_mode: SpawnMode::BoxFacingRandom {
+            spawn_box: SpawnBox {
+                left: 400,
+                top: 75,
+                box_width: 150,
+                box_height: 150,
+            }
+        },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -55,7 +70,14 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Blue",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 150 },
+        spawn_mode: SpawnMode::BoxFacingRandom {
+            spawn_box: SpawnBox {
+                left: 400,
+                top: 225,
+                box_width: 150,
+                box_height: 150,
+            }
+        },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -73,7 +95,14 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Gray",
-        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 200 },
+        spawn_mode: SpawnMode::BoxFacingRandom {
+            spawn_box: SpawnBox {
+                left: 250,
+                top: 225,
+                box_width: 150,
+                box_height: 150,
+            }
+        },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,

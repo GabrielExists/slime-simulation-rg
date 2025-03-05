@@ -18,8 +18,7 @@ use spirv_std::num_traits::Float;
 
 use bytemuck::{Pod, Zeroable};
 
-#[allow(dead_code)]
-#[derive(Copy, Clone, Hash)]
+#[derive(Copy, Clone)]
 pub enum SpawnMode {
     EvenlyDistributed,
     CenterFacingOutward,
@@ -42,6 +41,27 @@ pub enum SpawnMode {
     CircumferenceFacingClockwise {
         distance: u32,
     },
+    BoxFacingRandom {
+        spawn_box: SpawnBox,
+    },
+}
+
+#[derive(Copy, Clone)]
+pub struct SpawnBox {
+    pub left: u32,
+    pub top: u32,
+    pub box_width: u32,
+    pub box_height: u32,
+}
+impl Default for SpawnBox {
+    fn default() -> Self {
+        Self {
+            left: 100,
+            top: 100,
+            box_width: 300,
+            box_height: 300,
+        }
+    }
 }
 
 #[cfg(not(target_arch = "spirv"))]
@@ -56,6 +76,7 @@ impl Display for SpawnMode {
             SpawnMode::CircumferenceFacingOutward { .. } => f.write_str("Circumference facing outward"),
             SpawnMode::CircumferenceFacingRandom { .. } => f.write_str("Circumference facing random"),
             SpawnMode::CircumferenceFacingClockwise { .. } => f.write_str("Circumference facing clockwise"),
+            SpawnMode::BoxFacingRandom { .. } => f.write_str("Box"),
         }
     }
 }
@@ -70,7 +91,14 @@ impl SpawnMode {
             SpawnMode::CircumferenceFacingInward { distance } => Some(*distance),
             SpawnMode::CircumferenceFacingOutward { distance } => Some(*distance),
             SpawnMode::CircumferenceFacingRandom { distance } => Some(*distance),
-            SpawnMode::CircumferenceFacingClockwise { distance } => Some(*distance)
+            SpawnMode::CircumferenceFacingClockwise { distance } => Some(*distance),
+            SpawnMode::BoxFacingRandom { .. } => None,
+        }
+    }
+    pub fn spawn_box(&self) -> Option<SpawnBox> {
+        match self {
+            SpawnMode::BoxFacingRandom { spawn_box } => Some(*spawn_box),
+            _ => None
         }
     }
 }
@@ -97,6 +125,7 @@ impl Display for ClickMode {
         }
     }
 }
+
 impl ClickMode {
     pub fn encode(self) -> ClickModeEncoded {
         let number = match self {

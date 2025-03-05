@@ -5,7 +5,7 @@ use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::Globals;
 use crate::configuration::DEFAULT_DISTANCE;
-use shared::{AgentStatsAll, ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnMode, TrailStats};
+use shared::{AgentStatsAll, ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode, TrailStats};
 
 pub struct ConfigurationValues {
     pub globals: Globals,
@@ -92,6 +92,9 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                                 selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingClockwise {..}), SpawnMode::CircumferenceFacingClockwise {
                                     distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
                                 });
+                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::BoxFacingRandom {..}), SpawnMode::BoxFacingRandom {
+                                    spawn_box: spawn.spawn_box().unwrap_or(SpawnBox::default())
+                                });
                             });
                         let width = screen_size.width;
                         let height = screen_size.height;
@@ -126,6 +129,16 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             SpawnMode::CircumferenceFacingClockwise { distance } => {
                                 ui.add(Slider::new(distance, 0..=diagonal_max_radius)
                                     .text("Distance"));
+                            }
+                            SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
+                                ui.add(Slider::new(left, 0..=width)
+                                    .text("Left"));
+                                ui.add(Slider::new(top, 0..=height)
+                                    .text("Top"));
+                                ui.add(Slider::new(box_width, 0..=width - *left)
+                                    .text("Width"));
+                                ui.add(Slider::new(box_height, 0..=height - *top)
+                                    .text("Height"));
                             }
                         }
                     });
