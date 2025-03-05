@@ -268,7 +268,7 @@ async fn run_inner(
             } => {
                 program.handle_input(&event);
                 event_loop_window_target.exit()
-            },
+            }
             Event::WindowEvent {
                 event, ..
             } => {
