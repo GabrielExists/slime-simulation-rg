@@ -37,13 +37,14 @@ pub fn main_cs(
     if agent.channel_index as usize >= NUM_AGENT_TYPES {
         return;
     }
+    let screen_size = constants.screen_size;
     let agent_stats = &agent_stats_buffer[agent.channel_index as usize];
-    let random = hash((agent.y * constants.width as f32 + agent.x) as u32 + hash(id.x));
+    let random = hash((agent.y * screen_size.x as f32 + agent.x) as u32 + hash(id.x));
 
     // Sensor based on sensory data
-    let weight_forward = sense(trail_buffer, constants, agent, &agent_stats, 0.0);
-    let weight_left = sense(trail_buffer, constants, agent, &agent_stats, agent_stats.sensor_angle_spacing * PI / 180.0);
-    let weight_right = sense(trail_buffer, constants, agent, &agent_stats, -agent_stats.sensor_angle_spacing * PI / 180.0);
+    let weight_forward = sense(trail_buffer, screen_size, agent, &agent_stats, 0.0);
+    let weight_left = sense(trail_buffer, screen_size, agent, &agent_stats, agent_stats.sensor_angle_spacing * PI / 180.0);
+    let weight_right = sense(trail_buffer, screen_size, agent, &agent_stats, -agent_stats.sensor_angle_spacing * PI / 180.0);
 
     let random_steer_strength = random as f32 / u32::MAX as f32;
     let turn_speed = agent_stats.turn_speed * PI;
@@ -89,7 +90,7 @@ pub fn main_cs(
         while num_steps > step {
             step_x = step_x + agent.angle.cos() * step;
             step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, constants, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
+            let bounds = set_pixel(trail_buffer, screen_size, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -103,18 +104,18 @@ pub fn main_cs(
         step_x = step_x + agent.angle.cos() * num_steps;
         step_y = step_y + agent.angle.sin() * num_steps;
         if previous_x as i32 != step_x as i32 || previous_y as i32 != step_y as i32 {
-            let bounds = set_pixel(trail_buffer, constants, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
+            let bounds = set_pixel(trail_buffer, screen_size, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
             break 'clamp_block bounds;
         }
-        break 'clamp_block if is_inside_bounds(ivec2(step_x as i32, step_y as i32), constants) {
+        break 'clamp_block if is_inside_bounds(ivec2(step_x as i32, step_y as i32), constants.screen_size) {
             Bounds::InsideBounds
         } else {
             Bounds::OutsideBounds
         };
     };
     if let Bounds::OutsideBounds = bounds {
-        step_x = f32::min(constants.width as f32 - 1.01, f32::max(0.0, step_x));
-        step_y = f32::min(constants.height as f32 - 1.01, f32::max(0.0, step_y));
+        step_x = f32::min(constants.screen_size.x as f32 - 1.01, f32::max(0.0, step_x));
+        step_y = f32::min(constants.screen_size.y as f32 - 1.01, f32::max(0.0, step_y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
 
@@ -122,7 +123,7 @@ pub fn main_cs(
     agent.y = step_y;
 }
 
-fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
+fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
     let sensor_angle = agent.angle + angle_offset;
     let sensor_center = ivec2(
         (agent.x + sensor_angle.cos() * agent_stats.sensor_offset) as i32,
@@ -134,8 +135,8 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
         for offset_y in -1..=1 {
             let pos = sensor_center + ivec2(offset_x, offset_y);
 
-            if is_inside_bounds(pos, constants) {
-                let pixel = get_pixel(trail_buffer, constants, pos.as_uvec2());
+            if is_inside_bounds(pos, screen_size) {
+                let pixel = get_pixel(trail_buffer, screen_size, pos.as_uvec2());
                 sum += pixel.get_frac(0) * agent_stats.attraction_channel_one;
                 sum += pixel.get_frac(1) * agent_stats.attraction_channel_two;
                 sum += pixel.get_frac(2) * agent_stats.attraction_channel_three;
@@ -151,9 +152,9 @@ fn sense(trail_buffer: &mut [u32], constants: &ShaderConstants, agent: &Agent, a
 }
 
 
-fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats: &AgentStats, position: IVec2, channel_index: usize) -> Bounds {
-    if is_inside_bounds(position, constants) {
-        let mut pixel = get_pixel(trail_buffer, constants, position.as_uvec2());
+fn set_pixel(trail_buffer: &mut [u32], screen_size: UVec2, agent_stats: &AgentStats, position: IVec2, channel_index: usize) -> Bounds {
+    if is_inside_bounds(position, screen_size) {
+        let mut pixel = get_pixel(trail_buffer, screen_size, position.as_uvec2());
         let mut value_frac = pixel.get_frac(channel_index) as f32;
         value_frac += agent_stats.pixel_addition;
         pixel.set_frac(channel_index, f32::min(value_frac, 1.0));
@@ -165,9 +166,9 @@ fn set_pixel(trail_buffer: &mut [u32], constants: &ShaderConstants, agent_stats:
 
 /// rust-gpu does not support returning a reference in an option it seems.
 /// As a workaround, it is the callers responsibility to make sure position is within bounds
-pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderConstants, position: UVec2) -> PixelView<'pixel> {
+pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], screen_size: UVec2, position: UVec2) -> PixelView<'pixel> {
     // if is_inside_bounds(position, constants) {
-    let pixel_index = (position.y as usize * constants.width as usize + position.x as usize) * 2;
+    let pixel_index = (position.y as usize * screen_size.x as usize + position.x as usize) * 2;
     // Some(
     // Safety: Safe since we're mutably borrowing different indices, which means there's not aliasing of mutable references
     unsafe {
@@ -180,12 +181,12 @@ pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], constants: &ShaderCons
     // }
 }
 
-fn is_inside_bounds(position: IVec2, constants: &ShaderConstants) -> bool {
-    position.x >= 0 && position.x < constants.width as i32 && position.y >= 0 && position.y < constants.height as i32
+fn is_inside_bounds(position: IVec2, screen_size: UVec2) -> bool {
+    position.x >= 0 && position.x < screen_size.x as i32 && position.y >= 0 && position.y < screen_size.y as i32
 }
 
-fn is_inside_bounds_u(position: UVec2, constants: &ShaderConstants) -> bool {
-    position.x < constants.width as u32 && position.y < constants.height as u32
+fn is_inside_bounds_u(position: UVec2, screen_size: UVec2) -> bool {
+    position.x < screen_size.x as u32 && position.y < screen_size.y as u32
 }
 
 
@@ -198,7 +199,8 @@ pub fn diffuse_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] output_buffer: &mut [u32],
 ) {
     let pos = uvec2(id.x, id.y);
-    if !is_inside_bounds_u(pos, constants) {
+    let screen_size = constants.screen_size;
+    if !is_inside_bounds_u(pos, constants.screen_size) {
         return;
     }
     let channel_index = id.z as usize;
@@ -208,49 +210,19 @@ pub fn diffuse_cs(
     let diffusion_speed = trail_stats[channel_index].diffusion_speed;
     let evaporation_speed = trail_stats[channel_index].evaporation_speed;
 
-    let painting: Option<f32> = match (constants.mouse_down, constants.click_mode.decode()) {
-        (0, _) => {
-            None
-        }
-        (_, ClickMode::PaintTrail(paint_channel)) => {
-            if paint_channel == channel_index as u32 {
-                Some(1.0)
-            } else {
-                None
-            }
-        }
-        (_, ClickMode::ResetTrail(reset_channel)) => {
-            if reset_channel == channel_index as u32 {
-                Some(0.0)
-            } else {
-                None
-            }
-        }
-        (_, ClickMode::ResetAllTrails) => {
-            Some(0.0)
-        }
-        _ => None
-    };
-    if let Some(paint_target) = painting {
-        if within_range(pos.as_vec2(), constants.mouse_position, 5.0) {
-            let mut output_pixel = get_pixel(output_buffer, constants, pos);
-            output_pixel.set_frac(channel_index, paint_target);
-            return;
-        }
-    }
     let mut sum = 0.0;
     for offset_x in -1..=1 {
         for offset_y in -1..=1 {
             let sample_pos = pos.as_ivec2() + ivec2(offset_x, offset_y);
-            if is_inside_bounds(sample_pos, constants) {
-                let pixel = get_pixel(trail_buffer, constants, sample_pos.as_uvec2());
+            if is_inside_bounds(sample_pos, screen_size) {
+                let pixel = get_pixel(trail_buffer, screen_size, sample_pos.as_uvec2());
                 sum += pixel.get_frac(channel_index);
             }
         }
     }
 
-    let mut output_pixel = get_pixel(output_buffer, constants, pos);
-    let previous_value = output_pixel.get_frac(channel_index);
+    let pixel = get_pixel(trail_buffer, screen_size, pos);
+    let previous_value = pixel.get_frac(channel_index);
     let blur_result = sum / 9.0;
     let diffused_value = lerp(
         previous_value,
@@ -260,11 +232,50 @@ pub fn diffuse_cs(
 
     let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
     let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
+    let mut output_pixel = get_pixel(output_buffer, screen_size, pos);
     output_pixel.set_frac(channel_index, new_value);
 }
 
+
+const BRUSH_SIZE: u32 = 5;
+#[spirv(compute(threads(8, 8, 1)))]
+pub fn mouse_cs(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(push_constant)] mouse_constants: &MouseConstants,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
+) {
+    let pos = uvec2(id.x, id.y);
+    if !is_inside_bounds_u(pos, mouse_constants.screen_size) {
+        return;
+    }
+    if mouse_constants.mouse_down != 0 {
+        if within_range(pos.as_vec2(), mouse_constants.mouse_position, BRUSH_SIZE as f32) {
+            let mut pixel = get_pixel(trail_buffer, mouse_constants.screen_size, pos);
+            match mouse_constants.click_mode.decode() {
+                ClickMode::Disabled => {}
+                ClickMode::ShowMenu => {}
+                ClickMode::PaintTrail(trail_index) => {
+                    if (trail_index as usize) < NUM_TRAIL_STATS {
+                        pixel.set_frac(trail_index as usize, 1.0);
+                    }
+                }
+                ClickMode::ResetTrail(trail_index) => {
+                    if (trail_index as usize) < NUM_TRAIL_STATS {
+                        pixel.set_frac(trail_index as usize, 1.0);
+                    }
+                }
+                ClickMode::ResetAllTrails => {
+                    for i in 0..NUM_TRAIL_STATS {
+                        pixel.set(i, 0x00);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn within_range(first: Vec2, second: Vec2, distance: f32) -> bool {
-    let square_distance = f32::sqrt((first.x - second.x).pow(2) + (first.y - second.y).pow(2));
+    let square_distance = (first.x - second.x).pow(2) + (first.y - second.y).pow(2);
     square_distance < distance.pow(2)
 }
 
@@ -277,8 +288,8 @@ pub fn main_fs(
     output: &mut Vec4,
 ) {
     let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
-    if is_inside_bounds(position, constants) {
-        let pixel = get_pixel(trail_buffer, constants, position.as_uvec2());
+    if is_inside_bounds(position, constants.screen_size) {
+        let pixel = get_pixel(trail_buffer, constants.screen_size, position.as_uvec2());
         let r = f32::min(pixel.x_frac() + pixel.w_frac() * 0.3, 1.0);
         let g = f32::min(pixel.y_frac() + pixel.w_frac() * 0.3, 1.0);
         let b = f32::min(pixel.z_frac() + pixel.w_frac() * 0.3, 1.0);

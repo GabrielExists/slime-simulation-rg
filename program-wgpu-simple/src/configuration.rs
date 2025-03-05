@@ -35,14 +35,15 @@ pub const GLOBALS: Globals = Globals {
 pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     AgentStatsAll {
         name: "Red",
-        spawn_mode: SpawnMode::BoxFacingRandom {
-            spawn_box: SpawnBox {
-                left: 250,
-                top: 75,
-                box_width: 150,
-                box_height: 150,
-            }
-        },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+        // spawn_mode: SpawnMode::BoxFacingRandom {
+        //     spawn_box: SpawnBox {
+        //         left: 250,
+        //         top: 75,
+        //         box_width: 150,
+        //         box_height: 150,
+        //     }
+        // },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -60,14 +61,15 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Green",
-        spawn_mode: SpawnMode::BoxFacingRandom {
-            spawn_box: SpawnBox {
-                left: 400,
-                top: 75,
-                box_width: 150,
-                box_height: 150,
-            }
-        },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+        // spawn_mode: SpawnMode::BoxFacingRandom {
+        //     spawn_box: SpawnBox {
+        //         left: 400,
+        //         top: 75,
+        //         box_width: 150,
+        //         box_height: 150,
+        //     }
+        // },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -85,14 +87,15 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Blue",
-        spawn_mode: SpawnMode::BoxFacingRandom {
-            spawn_box: SpawnBox {
-                left: 400,
-                top: 225,
-                box_width: 150,
-                box_height: 150,
-            }
-        },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+        // spawn_mode: SpawnMode::BoxFacingRandom {
+        //     spawn_box: SpawnBox {
+        //         left: 400,
+        //         top: 225,
+        //         box_width: 150,
+        //         box_height: 150,
+        //     }
+        // },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,
@@ -110,14 +113,15 @@ pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
     },
     AgentStatsAll {
         name: "Gray",
-        spawn_mode: SpawnMode::BoxFacingRandom {
-            spawn_box: SpawnBox {
-                left: 250,
-                top: 225,
-                box_width: 150,
-                box_height: 150,
-            }
-        },
+        spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+        // spawn_mode: SpawnMode::BoxFacingRandom {
+        //     spawn_box: SpawnBox {
+        //         left: 250,
+        //         top: 225,
+        //         box_width: 150,
+        //         box_height: 150,
+        //     }
+        // },
         num_agents: 4000,
         shader_stats: AgentStats {
             velocity: 65.0,

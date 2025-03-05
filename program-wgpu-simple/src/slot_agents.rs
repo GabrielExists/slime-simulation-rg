@@ -151,21 +151,21 @@ impl Slot for SlotAgents {
         if configuration.shader_config_changed {
             let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
             program_init.queue.write_buffer(&self.init.agent_stats_buffer, 0, &agent_stats_bytes);
-            if configuration.respawn {
-                configuration.respawn = false;
-                let mut num_agents = 0;
-                let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
-                let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Agent buffer recreated"),
-                    contents: &agent_bytes,
-                    usage: wgpu::BufferUsages::STORAGE
-                        | wgpu::BufferUsages::COPY_DST
-                        | wgpu::BufferUsages::COPY_SRC,
-                });
-                self.init.agents_buffer = agent_buffer;
-                self.init.num_agents = num_agents;
-                self.recreate_buffers(program_init, program_buffers);
-            }
+        }
+        if configuration.respawn {
+            configuration.respawn = false;
+            let mut num_agents = 0;
+            let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
+            let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Agent buffer recreated"),
+                contents: &agent_bytes,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+            });
+            self.init.agents_buffer = agent_buffer;
+            self.init.num_agents = num_agents;
+            self.recreate_buffers(program_init, program_buffers);
         }
 
         // Run compute pass

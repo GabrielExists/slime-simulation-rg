@@ -77,6 +77,7 @@ mod slot_diffuse;
 mod configuration;
 mod slot_egui;
 mod configuration_menu;
+mod slot_mouse;
 
 fn main() {
     window::run();

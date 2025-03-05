@@ -3,7 +3,7 @@ use shared::ShaderConstants;
 use crate::program::*;
 use wgpu::util::DeviceExt;
 
-const HORIZONTAL_ENTRY_POINT: &str = "diffuse_cs";
+const ENTRY_POINT: &str = "diffuse_cs";
 
 pub struct SlotDiffuse {
     pub init: SlotDiffuseInit,
@@ -87,7 +87,7 @@ impl Slot for SlotDiffuse {
             label: None,
             layout: Some(&pipeline_layout),
             module: &program_init.module,
-            entry_point: HORIZONTAL_ENTRY_POINT,
+            entry_point: ENTRY_POINT,
         });
 
         let init = SlotDiffuseInit {

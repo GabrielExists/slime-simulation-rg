@@ -1,16 +1,17 @@
 use std::thread;
 use std::time::{Duration, Instant};
-use glam::{Vec2, vec2};
+use glam::uvec2;
 use crate::configuration::ConfigurationValues;
 use rand::Rng;
 use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
-use winit::event::{ElementState, MouseButton, WindowEvent};
+use winit::event::{WindowEvent};
 use wgpu::util::DeviceExt;
-use shared::{ClickMode, ShaderConstants, INTS_PER_PIXEL};
+use shared::{ShaderConstants, INTS_PER_PIXEL};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
+use crate::slot_mouse::SlotMouse;
 use crate::slot_egui::SlotEgui;
 use crate::slot_render::SlotRender;
 
@@ -19,11 +20,10 @@ pub struct Program<'window> {
     program_buffers: ProgramBuffers,
     slot_agents: SlotAgents,
     slot_diffuse: SlotDiffuse,
+    slot_mouse: SlotMouse,
     slot_render: SlotRender,
     slot_egui: SlotEgui,
     configuration: ConfigurationValues,
-    mouse_click: Option<ClickStart>,
-    mouse_position: Vec2,
     first_frame: bool,
 }
 
@@ -48,11 +48,6 @@ pub struct ProgramBuffers {
 pub struct Frame<'output> {
     pub output: &'output mut wgpu::SurfaceTexture,
     pub push_constants: shared::ShaderConstants,
-}
-
-pub struct ClickStart {
-    pos: Vec2,
-    time: Instant,
 }
 
 /// A slot is the backend that a shader "slots" into.
@@ -86,6 +81,7 @@ impl Program<'_> {
         let program_buffers = Self::create_buffers(&program_init);
         let slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
         let slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
+        let slot_mouse = SlotMouse::create(&program_init, &program_buffers, &configuration);
         let slot_render = SlotRender::create(&program_init, &program_buffers, &configuration);
         let slot_egui = SlotEgui::create(&program_init, &program_buffers, &configuration);
         Program {
@@ -93,11 +89,10 @@ impl Program<'_> {
             program_buffers,
             slot_agents,
             slot_diffuse,
+            slot_mouse,
             slot_render,
             slot_egui,
             configuration,
-            mouse_click: None,
-            mouse_position: (0.0, 0.0).into(),
             first_frame: true,
         }
     }
@@ -129,6 +124,7 @@ impl Program<'_> {
         self.program_buffers = Self::create_buffers(&self.program_init);
         self.slot_agents.recreate_buffers(&self.program_init, &self.program_buffers);
         self.slot_diffuse.recreate_buffers(&self.program_init, &self.program_buffers);
+        self.slot_mouse.recreate_buffers(&self.program_init, &self.program_buffers);
         self.slot_render.recreate_buffers(&self.program_init, &self.program_buffers);
         self.slot_egui.recreate_buffers(&self.program_init, &self.program_buffers);
     }
@@ -154,12 +150,10 @@ impl Program<'_> {
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
-            click_mode: self.configuration.globals.click_mode.encode(),
-            mouse_down: self.mouse_click.is_some() as u32,
-            mouse_position: self.mouse_position,
-            last_mouse_position: Default::default(),
-            width: self.program_buffers.screen_size.width,
-            height: self.program_buffers.screen_size.height,
+            screen_size: uvec2(
+                self.program_buffers.screen_size.width,
+                self.program_buffers.screen_size.height,
+            ),
             time,
             delta_time: delta_time * self.configuration.globals.time_scale,
         };
@@ -173,6 +167,7 @@ impl Program<'_> {
                 self.slot_diffuse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
             }
         }
+        self.slot_mouse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
         self.slot_render.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
         self.slot_egui.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
     }
@@ -180,45 +175,7 @@ impl Program<'_> {
     pub(crate) fn handle_input(&mut self, event: &WindowEvent) {
         let consumed = self.slot_egui.handle_input(&self.program_init.window, &event);
         if !consumed {
-            match event {
-                WindowEvent::CursorMoved { device_id: _, position } => {
-                    self.mouse_position = vec2(position.x as f32, position.y as f32);
-                }
-                WindowEvent::CursorEntered { device_id: _ } => {}
-                WindowEvent::CursorLeft { device_id: _ } => {}
-                WindowEvent::MouseInput { device_id: _, state, button } => {
-                    println!("Button press {:?} {:?}", button, state);
-                    if let MouseButton::Left = button {
-                        match state {
-                            ElementState::Pressed => {
-                                let click_start = ClickStart {
-                                    pos: self.mouse_position,
-                                    time: Instant::now(),
-                                };
-                                self.mouse_click = Some(click_start);
-                            }
-                            ElementState::Released => {
-                                if let Some(start) = self.mouse_click.take() {
-                                    if start.time.elapsed() > Duration::from_secs_f32(3.0) {
-                                        self.configuration.show_menu = !self.configuration.show_menu;
-                                    } else {
-                                        match self.configuration.globals.click_mode {
-                                            ClickMode::Disabled => {}
-                                            ClickMode::ShowMenu => {
-                                                self.configuration.show_menu = true;
-                                            }
-                                            ClickMode::PaintTrail(_) => {}
-                                            ClickMode::ResetTrail(_) => {}
-                                            ClickMode::ResetAllTrails => {}
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                _ => {}
-            }
+            self.slot_mouse.handle_input(&mut self.configuration, &event);
         }
     }
 

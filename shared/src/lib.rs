@@ -18,7 +18,7 @@ use spirv_std::glam;
 use spirv_std::num_traits::Float;
 
 use bytemuck::{Pod, Zeroable};
-use spirv_std::glam::Vec2;
+use spirv_std::glam::{UVec2, Vec2};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum SpawnMode {
@@ -162,14 +162,19 @@ impl ClickModeEncoded {
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
+    pub screen_size: UVec2,
+    pub time: f32,
+    pub delta_time: f32,
+}
+
+#[derive(Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+pub struct MouseConstants {
+    pub screen_size: UVec2,
     pub click_mode: ClickModeEncoded,
     pub mouse_down: u32,
     pub mouse_position: Vec2,
     pub last_mouse_position: Vec2,
-    pub width: u32,
-    pub height: u32,
-    pub time: f32,
-    pub delta_time: f32,
 }
 
 #[derive(Copy, Clone, PartialEq)]
