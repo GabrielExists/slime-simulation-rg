@@ -26,17 +26,17 @@ pub fn run() {
     // FIXME(eddyb) incomplete `winit` upgrade, follow the guides in:
     // https://github.com/rust-windowing/winit/releases/tag/v0.30.0
     #[allow(deprecated)]
-    #[cfg(target_arch = "aarch64")]
-    let window = event_loop
-    .create_window(
-        Window::default_attributes()
-            .with_title("Rust GPU - wgpu")
-            .with_inner_size(winit::dpi::LogicalSize::new(800.0, 480.0))
-            .with_fullscreen(Some(Fullscreen::Borderless(None))),
-    )
-    .unwrap();
+        #[cfg(target_arch = "aarch64")]
+        let window = event_loop
+        .create_window(
+            Window::default_attributes()
+                .with_title("Rust GPU - wgpu")
+                .with_inner_size(winit::dpi::LogicalSize::new(800.0, 480.0))
+                .with_fullscreen(Some(Fullscreen::Borderless(None))),
+        )
+        .unwrap();
     #[allow(deprecated)]
-    #[cfg(not(target_arch = "aarch64"))]
+        #[cfg(not(target_arch = "aarch64"))]
         let window = event_loop
         .create_window(
             Window::default_attributes()
@@ -57,7 +57,7 @@ async fn run_inner(
 ) {
     // Common in compute and graphics
     let backends = wgpu::util::backend_bits_from_env()
-        .unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::METAL);
+        .unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::METAL | wgpu::Backends::GL);
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
         dx12_shader_compiler: wgpu::util::dx12_shader_compiler_from_env().unwrap_or_default(),
@@ -253,7 +253,7 @@ async fn run_inner(
                 }
             }
             Event::WindowEvent {
-                event: event@ WindowEvent::CloseRequested |
+                event: event @ WindowEvent::CloseRequested |
                 event @ WindowEvent::KeyboardInput {
                     event:
                     winit::event::KeyEvent {
@@ -278,6 +278,6 @@ async fn run_inner(
         }
     }).unwrap();
 
-     // */
+    // */
 }
 
