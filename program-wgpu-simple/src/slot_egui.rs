@@ -1,3 +1,9 @@
+use std::fs;
+use std::future::Future;
+use std::pin::Pin;
+use std::ptr::write;
+use std::task::{Poll, Waker};
+use futures::TryFutureExt;
 use crate::configuration::ConfigurationValues;
 use egui::Context;
 use egui_wgpu::Renderer;
@@ -11,6 +17,14 @@ use crate::program::*;
 pub struct SlotEgui {
     pub state: State,
     pub renderer: Renderer,
+    pub local_state: LocalState,
+}
+
+pub struct LocalState {
+    // pub file_picker: Option<(String, Box<dyn std::future::Future<Output=Option<rfd::FileHandle>>>)>,
+    pub file_picker_handle: Option<(String, Box<dyn Future<Output=Option<rfd::FileHandle>> + Unpin>)>,
+    // pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
+    pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
 }
 
 impl Slot for SlotEgui {
@@ -39,6 +53,10 @@ impl Slot for SlotEgui {
         Self {
             state: egui_state,
             renderer: egui_renderer,
+            local_state: LocalState {
+                file_picker_handle: None,
+                file_write_handle: None,
+            },
         }
     }
 
@@ -48,6 +66,40 @@ impl Slot for SlotEgui {
     fn recreate_buffers(&mut self, _program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) {}
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
+        let mut ctx = futures::task::Context::from_waker(Waker::noop());
+        if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
+            let pinned = std::pin::pin!(picker_handle);
+            match pinned.poll(&mut ctx) {
+                Poll::Ready(file_handle) => {
+                    if let Some(file_handle) = file_handle {
+                        let file_contents = file_contents.clone();
+                        self.local_state.file_write_handle = Some(Box::pin(
+                            async {
+                                let file_handle = file_handle;
+                                let bytes = file_contents.into_bytes();
+                                file_handle.write(&bytes).await
+                            }
+                        ))
+                    }
+                    self.local_state.file_picker_handle.take();
+                }
+                Poll::Pending => {}
+            }
+        }
+
+        if let Some(write_handle) = &mut self.local_state.file_write_handle {
+            let pinned = std::pin::pin!(write_handle);
+            match pinned.poll(&mut ctx) {
+                Poll::Ready(file_handle) => {
+                    if let Err(error) = file_handle {
+                        println!("Failed to save configuration to file: {}", error);
+                    }
+                    self.local_state.file_write_handle.take();
+                }
+                Poll::Pending => {}
+            }
+        }
+
         configuration.shader_config_changed = false;
         let window = &program_init.window;
         let screen_descriptor = egui_wgpu::ScreenDescriptor {
@@ -67,7 +119,7 @@ impl Slot for SlotEgui {
         self.state.egui_ctx().begin_pass(raw_input);
 
         let previous_configuration = configuration.clone();
-        configuration_menu::render_configuration_menu(&self.state, program_buffers.screen_size, configuration);
+        configuration_menu::render_configuration_menu(&self.state, program_buffers.screen_size, configuration, &mut self.local_state);
         if configuration.globals != previous_configuration.globals ||
             configuration.agent_stats != previous_configuration.agent_stats ||
             configuration.trail_stats != previous_configuration.trail_stats {

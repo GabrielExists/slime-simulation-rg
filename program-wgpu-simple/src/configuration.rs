@@ -1,10 +1,11 @@
+use serde::{Deserialize, Serialize};
 use shared::*;
 
 pub const DEFAULT_WIDTH: u32 = 800;
 pub const DEFAULT_HEIGHT: u32 = 480;
 pub const DEFAULT_DISTANCE: u32 = 170;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigurationValues {
     pub globals: Globals,
     pub agent_stats: [AgentStatsAll; NUM_AGENT_TYPES],
@@ -18,7 +19,7 @@ pub struct ConfigurationValues {
     pub playing: bool,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Globals {
     pub fixed_delta_time: f32,
     pub time_scale: f32,
@@ -35,115 +36,126 @@ pub const GLOBALS: Globals = Globals {
     brush_size: 5.0,
 };
 
-pub const AGENT_STATS: [AgentStatsAll; NUM_AGENT_TYPES] = [
-    AgentStatsAll {
-        name: "Red",
-        spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
-        // spawn_mode: SpawnMode::BoxFacingRandom {
-        //     spawn_box: SpawnBox {
-        //         left: 250,
-        //         top: 75,
-        //         box_width: 150,
-        //         box_height: 150,
-        //     }
-        // },
-        num_agents: 4000,
-        shader_stats: AgentStats {
-            velocity: 65.0,
-            pixel_addition: 1.0 / 5.0,
-            turn_speed: 80.0,
-            turn_speed_avoidance: 30.0,
-            avoidance_threshold: 20.0,
-            sensor_angle_spacing: 60.0,
-            sensor_offset: 5.0,
-            attraction_channel_one: 0.2,
-            attraction_channel_two: 1.0,
-            attraction_channel_three: 0.0,
-            attraction_channel_four: -1.0,
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
+#[derive(Clone, PartialEq)]
+pub struct AgentStatsAll {
+    pub name: String,
+    pub spawn_mode: SpawnMode,
+    pub num_agents: usize,
+    pub shader_stats: AgentStats,
+}
+
+pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
+    [
+        AgentStatsAll {
+            name: "Red".to_string(),
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
+            // spawn_mode: SpawnMode::BoxFacingRandom {
+            //     spawn_box: SpawnBox {
+            //         left: 250,
+            //         top: 75,
+            //         box_width: 150,
+            //         box_height: 150,
+            //     }
+            // },
+            num_agents: 4000,
+            shader_stats: AgentStats {
+                velocity: 65.0,
+                pixel_addition: 1.0 / 5.0,
+                turn_speed: 80.0,
+                turn_speed_avoidance: 30.0,
+                avoidance_threshold: 20.0,
+                sensor_angle_spacing: 60.0,
+                sensor_offset: 5.0,
+                attraction_channel_one: 0.2,
+                attraction_channel_two: 1.0,
+                attraction_channel_three: 0.0,
+                attraction_channel_four: -1.0,
+            },
         },
-    },
-    AgentStatsAll {
-        name: "Green",
-        // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-        spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
-        // spawn_mode: SpawnMode::BoxFacingRandom {
-        //     spawn_box: SpawnBox {
-        //         left: 400,
-        //         top: 75,
-        //         box_width: 150,
-        //         box_height: 150,
-        //     }
-        // },
-        num_agents: 4000,
-        shader_stats: AgentStats {
-            velocity: 65.0,
-            pixel_addition: 1.0 / 5.0,
-            turn_speed: 80.0,
-            turn_speed_avoidance: 30.0,
-            avoidance_threshold: 20.0,
-            sensor_angle_spacing: 60.0,
-            sensor_offset: 5.0,
-            attraction_channel_one: -1.0,
-            attraction_channel_two: 0.2,
-            attraction_channel_three: 1.0,
-            attraction_channel_four: 0.0,
+        AgentStatsAll {
+            name: "Green".to_string(),
+            // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
+            // spawn_mode: SpawnMode::BoxFacingRandom {
+            //     spawn_box: SpawnBox {
+            //         left: 400,
+            //         top: 75,
+            //         box_width: 150,
+            //         box_height: 150,
+            //     }
+            // },
+            num_agents: 4000,
+            shader_stats: AgentStats {
+                velocity: 65.0,
+                pixel_addition: 1.0 / 5.0,
+                turn_speed: 80.0,
+                turn_speed_avoidance: 30.0,
+                avoidance_threshold: 20.0,
+                sensor_angle_spacing: 60.0,
+                sensor_offset: 5.0,
+                attraction_channel_one: -1.0,
+                attraction_channel_two: 0.2,
+                attraction_channel_three: 1.0,
+                attraction_channel_four: 0.0,
+            },
         },
-    },
-    AgentStatsAll {
-        name: "Blue",
-        // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-        spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 190 },
-        // spawn_mode: SpawnMode::BoxFacingRandom {
-        //     spawn_box: SpawnBox {
-        //         left: 400,
-        //         top: 225,
-        //         box_width: 150,
-        //         box_height: 150,
-        //     }
-        // },
-        num_agents: 4000,
-        shader_stats: AgentStats {
-            velocity: 65.0,
-            pixel_addition: 1.0 / 5.0,
-            turn_speed: 80.0,
-            turn_speed_avoidance: 30.0,
-            avoidance_threshold: 20.0,
-            sensor_angle_spacing: 60.0,
-            sensor_offset: 5.0,
-            attraction_channel_one: 0.0,
-            attraction_channel_two: -1.0,
-            attraction_channel_three: 0.2,
-            attraction_channel_four: 1.0,
+        AgentStatsAll {
+            name: "Blue".to_string(),
+            // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 190 },
+            // spawn_mode: SpawnMode::BoxFacingRandom {
+            //     spawn_box: SpawnBox {
+            //         left: 400,
+            //         top: 225,
+            //         box_width: 150,
+            //         box_height: 150,
+            //     }
+            // },
+            num_agents: 4000,
+            shader_stats: AgentStats {
+                velocity: 65.0,
+                pixel_addition: 1.0 / 5.0,
+                turn_speed: 80.0,
+                turn_speed_avoidance: 30.0,
+                avoidance_threshold: 20.0,
+                sensor_angle_spacing: 60.0,
+                sensor_offset: 5.0,
+                attraction_channel_one: 0.0,
+                attraction_channel_two: -1.0,
+                attraction_channel_three: 0.2,
+                attraction_channel_four: 1.0,
+            },
         },
-    },
-    AgentStatsAll {
-        name: "Gray",
-        // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-        spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 210 },
-        // spawn_mode: SpawnMode::BoxFacingRandom {
-        //     spawn_box: SpawnBox {
-        //         left: 250,
-        //         top: 225,
-        //         box_width: 150,
-        //         box_height: 150,
-        //     }
-        // },
-        num_agents: 4000,
-        shader_stats: AgentStats {
-            velocity: 65.0,
-            pixel_addition: 1.0 / 5.0,
-            turn_speed: 80.0,
-            turn_speed_avoidance: 30.0,
-            avoidance_threshold: 20.0,
-            sensor_angle_spacing: 60.0,
-            sensor_offset: 5.0,
-            attraction_channel_one: 1.0,
-            attraction_channel_two: 0.0,
-            attraction_channel_three: -1.0,
-            attraction_channel_four: 0.2,
+        AgentStatsAll {
+            name: "Gray".to_string(),
+            // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 210 },
+            // spawn_mode: SpawnMode::BoxFacingRandom {
+            //     spawn_box: SpawnBox {
+            //         left: 250,
+            //         top: 225,
+            //         box_width: 150,
+            //         box_height: 150,
+            //     }
+            // },
+            num_agents: 4000,
+            shader_stats: AgentStats {
+                velocity: 65.0,
+                pixel_addition: 1.0 / 5.0,
+                turn_speed: 80.0,
+                turn_speed_avoidance: 30.0,
+                avoidance_threshold: 20.0,
+                sensor_angle_spacing: 60.0,
+                sensor_offset: 5.0,
+                attraction_channel_one: 1.0,
+                attraction_channel_two: 0.0,
+                attraction_channel_three: -1.0,
+                attraction_channel_four: 0.2,
+            },
         },
-    },
-];
+    ]
+}
 
 pub const TRAIL_NAMES: [&'static str; NUM_TRAIL_STATS] = [
     "Red",
@@ -154,7 +166,7 @@ pub const TRAIL_NAMES: [&'static str; NUM_TRAIL_STATS] = [
 
 pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
     TrailStats {
-        evaporation_speed: 20.0,
+        evaporation_speed: 50.0,
         diffusion_speed: 480.0,
     },
     TrailStats {
@@ -162,11 +174,11 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
     },
     TrailStats {
-        evaporation_speed: 20.0,
+        evaporation_speed: 50.0,
         diffusion_speed: 480.0,
     },
     TrailStats {
-        evaporation_speed: 20.0,
+        evaporation_speed: 50.0,
         diffusion_speed: 480.0,
     },
 ];

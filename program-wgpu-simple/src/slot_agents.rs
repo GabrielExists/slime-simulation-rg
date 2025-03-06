@@ -1,7 +1,8 @@
+use crate::configuration::AgentStatsAll;
 use winit::dpi::PhysicalSize;
 use crate::configuration::ConfigurationValues;
 use rand::Rng;
-use shared::{AgentStatsAll, ShaderConstants, SpawnBox, SpawnMode};
+use shared::{ShaderConstants, SpawnBox, SpawnMode};
 use crate::program::*;
 use wgpu::util::DeviceExt;
 

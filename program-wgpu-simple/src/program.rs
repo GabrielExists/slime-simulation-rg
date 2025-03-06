@@ -1,9 +1,10 @@
 use std::thread;
 use std::time::{Duration, Instant};
+use crate::configuration::create_agent_stats_all;
 use glam::uvec2;
 use crate::configuration::ConfigurationValues;
 use rand::Rng;
-use crate::configuration::{AGENT_STATS, GLOBALS, TRAIL_STATS};
+use crate::configuration::{GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
 use winit::event::{WindowEvent};
@@ -70,7 +71,7 @@ impl Program<'_> {
         let configuration = ConfigurationValues {
             shader_config_changed: false,
             globals: GLOBALS,
-            agent_stats: AGENT_STATS,
+            agent_stats: create_agent_stats_all(),
             trail_stats: TRAIL_STATS,
             scale_factor: 1.0,
             show_menu: true,

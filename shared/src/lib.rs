@@ -7,6 +7,9 @@ extern crate spirv_std;
 
 #[cfg(not(target_arch = "spirv"))]
 use std::fmt::{Display, Formatter};
+#[cfg(not(target_arch = "spirv"))]
+use serde::{Serialize, Deserialize};
+
 use core::f32::consts::PI;
 use glam::{Vec3, vec3};
 
@@ -20,6 +23,7 @@ use spirv_std::num_traits::Float;
 use bytemuck::{Pod, Zeroable};
 use spirv_std::glam::{UVec2, Vec2};
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq)]
 pub enum SpawnMode {
     EvenlyDistributed,
@@ -48,6 +52,7 @@ pub enum SpawnMode {
     },
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq)]
 pub struct SpawnBox {
     pub left: u32,
@@ -106,6 +111,7 @@ impl SpawnMode {
     }
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq)]
 #[repr(C)]
 pub enum ClickMode {
@@ -179,16 +185,9 @@ pub struct MouseConstants {
     pub _padding: f32,
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub struct AgentStatsAll {
-    pub name: &'static str,
-    pub spawn_mode: SpawnMode,
-    pub num_agents: usize,
-    pub shader_stats: AgentStats,
-}
-
 pub const NUM_AGENT_TYPES: usize = 4;
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
@@ -208,10 +207,18 @@ pub struct AgentStats {
     pub attraction_channel_three: f32,
     pub attraction_channel_four: f32,
 }
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
+#[repr(C)]
+pub struct TrailInteraction {
+    addition: f32,
+    attraction: f32,
+}
 
 pub const NUM_TRAIL_STATS: usize = 4;
 pub const INTS_PER_PIXEL: u32 = NUM_TRAIL_STATS.div_ceil(2) as u32;
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
 #[repr(C)]
 pub struct TrailStats {

@@ -1,3 +1,4 @@
+use std::path::{PathBuf};
 use crate::configuration::ConfigurationValues;
 use winit::dpi::PhysicalSize;
 use crate::configuration::TRAIL_NAMES;
@@ -6,8 +7,9 @@ use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::DEFAULT_DISTANCE;
 use shared::{ClickMode, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
+use crate::slot_egui::LocalState;
 
-pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues) {
+pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues, local_state: &mut LocalState) {
     configuration.shader_config_changed = false;
     if configuration.show_menu {
         egui::Window::new("Configuration")
@@ -41,7 +43,7 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         ui.add(Slider::new(&mut agent_stats.shader_stats.velocity, 5.0..=100.0)
                             .text("Velocity"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.pixel_addition, 0.01..=1.0)
-                            .text("Pixel addition divisor").logarithmic(true));
+                            .text("Pixel addition").logarithmic(true));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed, 5.0..=100.0)
                             .text("Turn speed"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed_avoidance, 5.0..=100.0)
@@ -183,6 +185,23 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                 ui.add(Slider::new(&mut configuration.globals.brush_size, 3.0..=100.0)
                     .logarithmic(true)
                     .text("Brush size"));
+                ui.separator();
+                if ui.button("Save preset").clicked() {
+                    if let Ok(save_file_string) = serde_json::to_string_pretty(&configuration) {
+                        let picker_future = rfd::AsyncFileDialog::new()
+                            .add_filter("text", &["json"])
+                            .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
+                            .save_file();
+
+                        local_state.file_picker_handle = Some((save_file_string, Box::new(picker_future)));
+                        // if let Some(file_path) = rfd::FileDialog::new()
+                        //     .add_filter("text", &["json"])
+                        //     .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
+                        //     .save_file() {
+                        //     // let _ = fs::write(file_path, string);
+                        // }
+                    }
+                }
             });
     }
 }
