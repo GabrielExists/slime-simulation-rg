@@ -29,9 +29,9 @@ pub struct Globals {
 }
 
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0 / 120.0,
-    time_scale: 0.2,
-    compute_steps_per_render: 1,
+    fixed_delta_time: 1.0 / 8.0,
+    time_scale: 0.1,
+    compute_steps_per_render: 5,
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 5.0,
 };
@@ -81,11 +81,11 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 1.0,
+                        attraction: -1.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.4,
+                        conversion: 3,
                     },
                 ],
             },
@@ -103,21 +103,21 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_offset: 5.0,
                 interaction_channels: [
                     TrailInteraction {
-                        attraction: -1.0,
+                        attraction: 0.0,
                         addition: 0.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 0.2,
+                        attraction: 1.0,
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 1.0,
+                        attraction: -1.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
@@ -162,7 +162,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: -1.0,
+                        attraction: 1.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
@@ -209,23 +209,23 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: 1.0,
                         addition: 0.0,
-                        conversion_enabled: 1,
-                        conversion_threshold: 0.8,
+                        conversion_enabled: 0,
+                        conversion_threshold: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
                         attraction: 0.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
+                        conversion: 1,
                     },
                     TrailInteraction {
                         attraction: -1.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
+                        conversion: 2,
                     },
                     TrailInteraction {
                         attraction: 0.2,
