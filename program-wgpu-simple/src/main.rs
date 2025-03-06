@@ -72,6 +72,7 @@ rust_2018_idioms
 
 extern crate rfd;
 extern crate futures;
+extern crate shared;
 
 mod window;
 mod program;

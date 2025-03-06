@@ -6,7 +6,7 @@ use egui::{Slider, Ui};
 use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::DEFAULT_DISTANCE;
-use shared::{ClickMode, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
+use shared::{ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
 use crate::slot_egui::LocalState;
 
 pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues, local_state: &mut LocalState) {
@@ -42,8 +42,6 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     ui.collapsing(format!("Agent {}", agent_stats.name), |ui| {
                         ui.add(Slider::new(&mut agent_stats.shader_stats.velocity, 5.0..=100.0)
                             .text("Velocity"));
-                        ui.add(Slider::new(&mut agent_stats.shader_stats.pixel_addition, 0.01..=1.0)
-                            .text("Pixel addition").logarithmic(true));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed, 5.0..=100.0)
                             .text("Turn speed"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.turn_speed_avoidance, 5.0..=100.0)
@@ -54,14 +52,24 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             .text("Sensor angle spacing (degrees)"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
                             .text("Sensor offset"));
-                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_one, -1.0..=1.0)
-                            .text(format!("Attraction channel {}", TRAIL_NAMES[0])));
-                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_two, -1.0..=1.0)
-                            .text(format!("Attraction channel {}", TRAIL_NAMES[1])));
-                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_three, -1.0..=1.0)
-                            .text(format!("Attraction channel {}", TRAIL_NAMES[2])));
-                        ui.add(Slider::new(&mut agent_stats.shader_stats.attraction_channel_four, -1.0..=1.0)
-                            .text(format!("Attraction channel {}", TRAIL_NAMES[3])));
+                        for channel_index in 0..NUM_TRAIL_STATS {
+                            ui.separator();
+                            ui.label(format!("Trail {}", TRAIL_NAMES[channel_index]));
+                            let interaction = &mut agent_stats.shader_stats.interaction_channels[channel_index];
+                            ui.add(Slider::new(&mut interaction.attraction, -1.0..=1.0)
+                                .text("Attraction"));
+                            ui.add(Slider::new(&mut interaction.addition, -1.0..=1.0)
+                                .text("Attraction"));
+                            let mut conversion_enabled = interaction.conversion_enabled != 0;
+                            ui.checkbox(&mut conversion_enabled, "Conversion enabled");
+                            interaction.conversion_enabled = if conversion_enabled { 1 } else { 0 };
+                            if interaction.conversion_enabled != 0 {
+                                ui.add(Slider::new(&mut interaction.conversion_threshold, -1.0..=1.0)
+                                    .text("Conversion threshold"));
+                                ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
+                                    .text("Conversion new agent type"));
+                            }
+                        }
                         ui.separator();
                         ui.label("Applies on reset:");
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));

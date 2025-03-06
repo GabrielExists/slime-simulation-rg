@@ -34,11 +34,11 @@ pub fn main_cs(
         return;
     }
     let agent = &mut agents_buffer[agent_index];
-    if agent.channel_index as usize >= NUM_AGENT_TYPES {
+    if agent.agent_type as usize >= NUM_AGENT_TYPES {
         return;
     }
     let screen_size = constants.screen_size;
-    let agent_stats = &agent_stats_buffer[agent.channel_index as usize];
+    let agent_stats = &agent_stats_buffer[agent.agent_type as usize];
     let random = hash((agent.y * screen_size.x as f32 + agent.x) as u32 + hash(id.x));
 
     // Sensor based on sensory data
@@ -83,44 +83,40 @@ pub fn main_cs(
 
     // Render each pixel inbetween here and the end of the streak we move this frame
     let mut num_steps = agent_stats.velocity * constants.delta_time;
-    let step = 1.0;
-    let mut step_x = agent.x;
-    let mut step_y = agent.y;
+    let step_size = 1.0;
+    let mut step_pos = vec2(agent.x, agent.y);
     let bounds: Bounds = 'clamp_block: loop {
-        while num_steps > step {
-            step_x = step_x + agent.angle.cos() * step;
-            step_y = step_y + agent.angle.sin() * step;
-            let bounds = set_pixel(trail_buffer, screen_size, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
+        while num_steps > step_size {
+            step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * step_size;
+            let bounds = process_pixel(trail_buffer, screen_size, &agent_stats, agent, step_pos.as_ivec2());
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
-            num_steps -= step;
+            num_steps -= step_size;
         }
         // If we didn't go outside the window, which is the normal case,
         // num_steps is now smaller than 1.0
         // Do the last little leap
-        let previous_x = step_x;
-        let previous_y = step_y;
-        step_x = step_x + agent.angle.cos() * num_steps;
-        step_y = step_y + agent.angle.sin() * num_steps;
-        if previous_x as i32 != step_x as i32 || previous_y as i32 != step_y as i32 {
-            let bounds = set_pixel(trail_buffer, screen_size, &agent_stats, ivec2(step_x as i32, step_y as i32), agent.channel_index as usize);
+        let previous = step_pos;
+        step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * num_steps;
+        if previous.as_ivec2() != step_pos.as_ivec2() {
+            let bounds = process_pixel(trail_buffer, screen_size, &agent_stats, agent, step_pos.as_ivec2());
             break 'clamp_block bounds;
         }
-        break 'clamp_block if is_inside_bounds(ivec2(step_x as i32, step_y as i32), constants.screen_size) {
+        break 'clamp_block if is_inside_bounds(step_pos.as_ivec2(), constants.screen_size) {
             Bounds::InsideBounds
         } else {
             Bounds::OutsideBounds
         };
     };
     if let Bounds::OutsideBounds = bounds {
-        step_x = f32::min(constants.screen_size.x as f32 - 1.01, f32::max(0.0, step_x));
-        step_y = f32::min(constants.screen_size.y as f32 - 1.01, f32::max(0.0, step_y));
+        step_pos.x = f32::min(constants.screen_size.x as f32 - 1.01, f32::max(0.0, step_pos.x));
+        step_pos.y = f32::min(constants.screen_size.y as f32 - 1.01, f32::max(0.0, step_pos.y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
 
-    agent.x = step_x;
-    agent.y = step_y;
+    agent.x = step_pos.x;
+    agent.y = step_pos.y;
 }
 
 fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
@@ -137,10 +133,10 @@ fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stat
 
             if is_inside_bounds(pos, screen_size) {
                 let pixel = get_pixel(trail_buffer, screen_size, pos.as_uvec2());
-                sum += pixel.get_frac(0) * agent_stats.attraction_channel_one;
-                sum += pixel.get_frac(1) * agent_stats.attraction_channel_two;
-                sum += pixel.get_frac(2) * agent_stats.attraction_channel_three;
-                sum += pixel.get_frac(3) * agent_stats.attraction_channel_four;
+                for i in 0..NUM_TRAIL_STATS {
+                    let channel_stats = &agent_stats.interaction_channels[i];
+                    sum += pixel.get_frac(i) * channel_stats.attraction;
+                }
             }
         }
     }
@@ -152,12 +148,18 @@ fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stat
 }
 
 
-fn set_pixel(trail_buffer: &mut [u32], screen_size: UVec2, agent_stats: &AgentStats, position: IVec2, channel_index: usize) -> Bounds {
+fn process_pixel(trail_buffer: &mut [u32], screen_size: UVec2, agent_stats: &AgentStats, agent: &mut Agent, position: IVec2) -> Bounds {
     if is_inside_bounds(position, screen_size) {
         let mut pixel = get_pixel(trail_buffer, screen_size, position.as_uvec2());
-        let mut value_frac = pixel.get_frac(channel_index) as f32;
-        value_frac += agent_stats.pixel_addition;
-        pixel.set_frac(channel_index, f32::min(value_frac, 1.0));
+        for trail_index in 0..NUM_TRAIL_STATS {
+            let interaction = agent_stats.interaction_channels[trail_index];
+            let mut value_frac = pixel.get_frac(trail_index as usize) as f32;
+            if interaction.conversion_enabled != 0 && value_frac > interaction.conversion_threshold {
+                agent.agent_type = interaction.conversion;
+            }
+            value_frac += interaction.addition;
+            pixel.set_frac(trail_index, f32::min(value_frac, 1.0));
+        }
         Bounds::InsideBounds
     } else {
         Bounds::OutsideBounds

@@ -222,7 +222,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: size.width as f32 / 2.0,
                 y: size.height as f32 / 2.0,
                 angle: get_random_angle(),
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::PointFacingOutward { x, y } => {
@@ -230,7 +230,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: *x as f32,
                 y: *y as f32,
                 angle: get_random_angle(),
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::CircleFacingInward { max_distance } => {
@@ -242,7 +242,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: center_x + random_angle.cos() * random_distance,
                 y: center_y + random_angle.sin() * random_distance,
                 angle: std::f32::consts::PI + random_angle,
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::EvenlyDistributed => {
@@ -250,7 +250,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: rand::rng().random_range(0..size.width * 10) as f32 / 10.0,
                 y: rand::rng().random_range(0..size.height * 10) as f32 / 10.0,
                 angle: get_random_angle(),
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::CircumferenceFacingInward { distance } => {
@@ -259,7 +259,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: center_x + random_angle.cos() * *distance as f32,
                 y: center_y + random_angle.sin() * *distance as f32,
                 angle: std::f32::consts::PI + random_angle,
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::CircumferenceFacingOutward { distance } => {
@@ -268,7 +268,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: center_x + random_angle.cos() * *distance as f32,
                 y: center_y + random_angle.sin() * *distance as f32,
                 angle: random_angle,
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::CircumferenceFacingRandom { distance } => {
@@ -277,7 +277,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: center_x + random_angle.cos() * *distance as f32,
                 y: center_y + random_angle.sin() * *distance as f32,
                 angle: get_random_angle(),
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::CircumferenceFacingClockwise { distance } => {
@@ -286,7 +286,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: center_x + random_angle.cos() * *distance as f32,
                 y: center_y + random_angle.sin() * *distance as f32,
                 angle: std::f32::consts::PI / 2.0 + random_angle,
-                channel_index,
+                agent_type: channel_index,
             }
         }
         SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
@@ -294,7 +294,7 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u
                 x: rand::rng().random_range(*left as f32..*left as f32 + *box_width as f32),
                 y: rand::rng().random_range(*top as f32..*top as f32 + *box_height as f32),
                 angle: get_random_angle(),
-                channel_index,
+                agent_type: channel_index,
             }
         }
     }

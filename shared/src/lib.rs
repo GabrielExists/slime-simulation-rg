@@ -193,7 +193,6 @@ pub const NUM_AGENT_TYPES: usize = 4;
 pub struct AgentStats {
     // Pixels travelled per second
     pub velocity: f32,
-    pub pixel_addition: f32,
     pub turn_speed: f32,
     pub turn_speed_avoidance: f32,
     // Maximum value is 9.0
@@ -202,17 +201,17 @@ pub struct AgentStats {
     pub avoidance_threshold: f32,
     pub sensor_angle_spacing: f32,
     pub sensor_offset: f32,
-    pub attraction_channel_one: f32,
-    pub attraction_channel_two: f32,
-    pub attraction_channel_three: f32,
-    pub attraction_channel_four: f32,
+    pub interaction_channels: [TrailInteraction; NUM_AGENT_TYPES],
 }
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
 #[repr(C)]
 pub struct TrailInteraction {
-    addition: f32,
-    attraction: f32,
+    pub attraction: f32,
+    pub addition: f32,
+    pub conversion_enabled: u32,
+    pub conversion_threshold: f32,
+    pub conversion: u32,
 }
 
 pub const NUM_TRAIL_STATS: usize = 4;
@@ -239,7 +238,7 @@ pub struct Agent {
     pub x: f32,
     pub y: f32,
     pub angle: f32,
-    pub channel_index: u32,
+    pub agent_type: u32,
 }
 
 pub fn saturate(x: f32) -> f32 {
