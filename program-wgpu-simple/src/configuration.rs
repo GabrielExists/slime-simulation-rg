@@ -50,7 +50,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Red".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
-            num_agents: 4000,
+            num_agents: 0000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -74,14 +74,14 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 0.0,
+                        attraction: 1.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: -1.0,
+                        attraction: 1.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
@@ -105,8 +105,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: -1.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -157,8 +157,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: 0.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -169,7 +169,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 0.0,
+                        attraction: 0.2,
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
@@ -209,8 +209,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: 1.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -228,7 +228,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 0.0,
+                        attraction: 0.2,
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
