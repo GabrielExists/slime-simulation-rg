@@ -29,8 +29,8 @@ pub struct Globals {
 }
 
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0 / 120.0,
-    time_scale: 2.0,
+    fixed_delta_time: 1.0 / 8.0,
+    time_scale: 0.1,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(3),
     brush_size: 12.0,
