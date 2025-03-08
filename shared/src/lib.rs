@@ -185,7 +185,7 @@ pub struct MouseConstants {
     pub _padding: f32,
 }
 
-pub const NUM_AGENT_TYPES: usize = 4;
+pub const NUM_AGENT_TYPES: usize = 6;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
@@ -201,10 +201,12 @@ pub struct AgentStats {
     pub avoidance_threshold: f32,
     pub sensor_angle_spacing: f32,
     pub sensor_offset: f32,
-    pub interaction_channels: [TrailInteraction; NUM_AGENT_TYPES],
+    pub timeout: f32,
+    pub timeout_conversion: u32,
+    pub interaction_channels: [TrailInteraction; NUM_TRAIL_STATS],
 }
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
-#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
+#[derive(Copy, Clone, PartialEq, Default, Pod, Zeroable)]
 #[repr(C)]
 pub struct TrailInteraction {
     pub attraction: f32,
@@ -239,6 +241,7 @@ pub struct Agent {
     pub y: f32,
     pub angle: f32,
     pub agent_type: u32,
+    pub countdown: f32,
 }
 
 pub fn saturate(x: f32) -> f32 {

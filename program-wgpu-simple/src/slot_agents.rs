@@ -205,7 +205,7 @@ impl SlotAgents {
                 std::iter::repeat(())
                     .take(agent_stats.num_agents)
                     .flat_map(move |()| {
-                        let agent = spawn_agent(size, &agent_stats.spawn_mode, channel_index as u32);
+                        let agent = spawn_agent(size, &agent_stats.spawn_mode, channel_index as u32, agent_stats);
                         bytemuck::bytes_of(&agent).to_vec()
                     })
             }).collect::<Vec<_>>();
@@ -213,89 +213,89 @@ impl SlotAgents {
     }
 }
 
-fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, channel_index: u32) -> shared::Agent {
+fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, agent_type: u32, agent_stats: &AgentStatsAll) -> shared::Agent {
     let center_x = size.width as f32 / 2.0;
     let center_y = size.height as f32 / 2.0;
+    let create_agent = |x, y, angle| {
+        shared::Agent {
+            x,
+            y,
+            angle,
+            agent_type,
+            countdown: agent_stats.shader_stats.timeout,
+        }
+    };
     match spawn_mode {
         SpawnMode::CenterFacingOutward => {
-            shared::Agent {
-                x: size.width as f32 / 2.0,
-                y: size.height as f32 / 2.0,
-                angle: get_random_angle(),
-                agent_type: channel_index,
-            }
+            create_agent(
+                size.width as f32 / 2.0,
+                size.height as f32 / 2.0,
+                get_random_angle(),
+            )
         }
         SpawnMode::PointFacingOutward { x, y } => {
-            shared::Agent {
-                x: *x as f32,
-                y: *y as f32,
-                angle: get_random_angle(),
-                agent_type: channel_index,
-            }
+            create_agent(
+                *x as f32,
+                *y as f32,
+                get_random_angle(),
+            )
         }
         SpawnMode::CircleFacingInward { max_distance } => {
             let max_number = 100000;
             let random_angle = get_random_angle();
             let random_fraction = rand::rng().random_range(0..max_number) as f32 / max_number as f32;
             let random_distance = random_fraction * *max_distance as f32;
-            shared::Agent {
-                x: center_x + random_angle.cos() * random_distance,
-                y: center_y + random_angle.sin() * random_distance,
-                angle: std::f32::consts::PI + random_angle,
-                agent_type: channel_index,
-            }
+            create_agent(
+                center_x + random_angle.cos() * random_distance,
+                center_y + random_angle.sin() * random_distance,
+                std::f32::consts::PI + random_angle,
+            )
         }
         SpawnMode::EvenlyDistributed => {
-            shared::Agent {
-                x: rand::rng().random_range(0..size.width * 10) as f32 / 10.0,
-                y: rand::rng().random_range(0..size.height * 10) as f32 / 10.0,
-                angle: get_random_angle(),
-                agent_type: channel_index,
-            }
+            create_agent(
+                rand::rng().random_range(0..size.width * 10) as f32 / 10.0,
+                rand::rng().random_range(0..size.height * 10) as f32 / 10.0,
+                get_random_angle(),
+            )
         }
         SpawnMode::CircumferenceFacingInward { distance } => {
             let random_angle = get_random_angle();
-            shared::Agent {
-                x: center_x + random_angle.cos() * *distance as f32,
-                y: center_y + random_angle.sin() * *distance as f32,
-                angle: std::f32::consts::PI + random_angle,
-                agent_type: channel_index,
-            }
+            create_agent(
+                center_x + random_angle.cos() * *distance as f32,
+                center_y + random_angle.sin() * *distance as f32,
+                std::f32::consts::PI + random_angle,
+            )
         }
         SpawnMode::CircumferenceFacingOutward { distance } => {
             let random_angle = get_random_angle();
-            shared::Agent {
-                x: center_x + random_angle.cos() * *distance as f32,
-                y: center_y + random_angle.sin() * *distance as f32,
-                angle: random_angle,
-                agent_type: channel_index,
-            }
+            create_agent(
+                center_x + random_angle.cos() * *distance as f32,
+                center_y + random_angle.sin() * *distance as f32,
+                random_angle,
+            )
         }
         SpawnMode::CircumferenceFacingRandom { distance } => {
             let random_angle = get_random_angle();
-            shared::Agent {
-                x: center_x + random_angle.cos() * *distance as f32,
-                y: center_y + random_angle.sin() * *distance as f32,
-                angle: get_random_angle(),
-                agent_type: channel_index,
-            }
+            create_agent(
+                center_x + random_angle.cos() * *distance as f32,
+                center_y + random_angle.sin() * *distance as f32,
+                get_random_angle(),
+            )
         }
         SpawnMode::CircumferenceFacingClockwise { distance } => {
             let random_angle = get_random_angle();
-            shared::Agent {
-                x: center_x + random_angle.cos() * *distance as f32,
-                y: center_y + random_angle.sin() * *distance as f32,
-                angle: std::f32::consts::PI / 2.0 + random_angle,
-                agent_type: channel_index,
-            }
+            create_agent(
+                center_x + random_angle.cos() * *distance as f32,
+                center_y + random_angle.sin() * *distance as f32,
+                std::f32::consts::PI / 2.0 + random_angle,
+            )
         }
         SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
-            shared::Agent {
-                x: rand::rng().random_range(*left as f32..*left as f32 + *box_width as f32),
-                y: rand::rng().random_range(*top as f32..*top as f32 + *box_height as f32),
-                angle: get_random_angle(),
-                agent_type: channel_index,
-            }
+            create_agent(
+                rand::rng().random_range(*left as f32..*left as f32 + *box_width as f32),
+                rand::rng().random_range(*top as f32..*top as f32 + *box_height as f32),
+                get_random_angle(),
+            )
         }
     }
 }
