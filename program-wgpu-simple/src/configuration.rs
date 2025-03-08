@@ -29,8 +29,8 @@ pub struct Globals {
 }
 
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0 / 8.0,
-    time_scale: 0.1,
+    fixed_delta_time: 1.0 / 120.0,
+    time_scale: 2.0,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(3),
     brush_size: 12.0,
@@ -50,14 +50,14 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 190 },
-            num_agents: 10000,
+            num_agents: 1000000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 9.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
@@ -77,7 +77,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                     TrailInteraction {
                         attraction: 0.2,
-                        addition: 1.0 / 5.0,
+                        addition: 1.0 / 25.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
@@ -95,7 +95,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Green".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
-            num_agents: 10000,
+            num_agents: 1000000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -115,7 +115,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                     TrailInteraction {
                         attraction: 0.5,
-                        addition: 1.0 / 5.0,
+                        addition: 1.0 / 25.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
@@ -129,7 +129,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                     TrailInteraction {
                         attraction: 1.0,
-                        addition: -1.0,
+                        addition: -0.1,
                         conversion_enabled: 1,
                         conversion_threshold: 0.2,
                         conversion: 3,
@@ -173,7 +173,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 0.0,
+                        attraction: -0.1,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
@@ -197,11 +197,11 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 timeout_conversion: 1,
                 interaction_channels: [
                     TrailInteraction {
-                        attraction: -0.0,
-                        addition: 1.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        attraction: 0.0,
+                        addition: 1.0 / 5.0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.9,
+                        conversion: 3,
                     },
                     TrailInteraction {
                         attraction: 0.0,
@@ -220,9 +220,9 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: -0.1,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.2,
+                        conversion: 3,
                     },
                 ],
             },

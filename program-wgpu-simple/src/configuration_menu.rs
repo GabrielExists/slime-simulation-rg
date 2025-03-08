@@ -52,24 +52,26 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             .text("Sensor angle spacing (degrees)"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
                             .text("Sensor offset"));
+                        ui.collapsing("Trail interactions", |ui| {
                         for channel_index in 0..NUM_TRAIL_STATS {
                             ui.separator();
                             ui.label(format!("Trail {}", TRAIL_NAMES[channel_index]));
                             let interaction = &mut agent_stats.shader_stats.interaction_channels[channel_index];
-                            ui.add(Slider::new(&mut interaction.attraction, -1.0..=1.0)
+                            ui.add(Slider::new(&mut interaction.attraction, -10.0..=10.0)
                                 .text("Attraction"));
                             ui.add(Slider::new(&mut interaction.addition, -1.0..=1.0)
-                                .text("Attraction"));
+                                .text("Addition"));
                             let mut conversion_enabled = interaction.conversion_enabled != 0;
                             ui.checkbox(&mut conversion_enabled, "Conversion enabled");
                             interaction.conversion_enabled = if conversion_enabled { 1 } else { 0 };
                             if interaction.conversion_enabled != 0 {
-                                ui.add(Slider::new(&mut interaction.conversion_threshold, -1.0..=1.0)
+                                ui.add(Slider::new(&mut interaction.conversion_threshold, 0.0..=1.0)
                                     .text("Conversion threshold"));
                                 ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
                                     .text("Conversion new agent type"));
                             }
                         }
+                        });
                         ui.separator();
                         ui.label("Applies on reset:");
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
@@ -147,6 +149,7 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         }
                     });
                 }
+
                 for (trail_index, trail_stats) in configuration.trail_stats.iter_mut().enumerate() {
                     ui.collapsing(format!("Trail {}", TRAIL_NAMES[trail_index]), |ui| {
                         ui.add(Slider::new(&mut trail_stats.evaporation_speed, 0.0..=1000.0)
