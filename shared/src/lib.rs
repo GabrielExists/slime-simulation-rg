@@ -185,7 +185,7 @@ pub struct MouseConstants {
     pub _padding: f32,
 }
 
-pub const NUM_AGENT_TYPES: usize = 6;
+pub const NUM_AGENT_TYPES: usize = 4;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
