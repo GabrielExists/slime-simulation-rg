@@ -154,9 +154,9 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     TrailInteraction {
                         attraction: -1.0,
                         addition: 0.0,
-                        conversion_enabled: 0,
-                        conversion_threshold: 0.0,
-                        conversion: 0,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.2,
+                        conversion: 2,
                     },
                     TrailInteraction {
                         attraction: 0.0,
@@ -173,7 +173,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: -0.1,
+                        attraction: 0.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
