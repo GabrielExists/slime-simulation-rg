@@ -203,7 +203,7 @@ fn is_inside_bounds_u(position: UVec2, screen_size: UVec2) -> bool {
 }
 
 
-#[spirv(compute(threads(8, 8, 4)))]
+#[spirv(compute(threads(8, 8, 1)))]
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(push_constant)] constants: &ShaderConstants,
@@ -216,37 +216,35 @@ pub fn diffuse_cs(
     if !is_inside_bounds_u(pos, constants.screen_size) {
         return;
     }
-    let channel_index = id.z as usize;
-    if channel_index >= NUM_TRAIL_STATS {
-        return;
-    }
-    let diffusion_speed = trail_stats[channel_index].diffusion_speed;
-    let evaporation_speed = trail_stats[channel_index].evaporation_speed;
+    for channel_index in 0..NUM_TRAIL_STATS {
+        let diffusion_speed = trail_stats[channel_index].diffusion_speed;
+        let evaporation_speed = trail_stats[channel_index].evaporation_speed;
 
-    let mut sum = 0.0;
-    for offset_x in -1..=1 {
-        for offset_y in -1..=1 {
-            let sample_pos = pos.as_ivec2() + ivec2(offset_x, offset_y);
-            if is_inside_bounds(sample_pos, screen_size) {
-                let pixel = get_pixel(trail_buffer, screen_size, sample_pos.as_uvec2());
-                sum += pixel.get_frac(channel_index);
+        let mut sum = 0.0;
+        for offset_x in -1..=1 {
+            for offset_y in -1..=1 {
+                let sample_pos = pos.as_ivec2() + ivec2(offset_x, offset_y);
+                if is_inside_bounds(sample_pos, screen_size) {
+                    let pixel = get_pixel(trail_buffer, screen_size, sample_pos.as_uvec2());
+                    sum += pixel.get_frac(channel_index);
+                }
             }
         }
+
+        let pixel = get_pixel(trail_buffer, screen_size, pos);
+        let previous_value = pixel.get_frac(channel_index);
+        let blur_result = sum / 9.0;
+        let diffused_value = lerp(
+            previous_value,
+            blur_result,
+            (diffusion_speed / 100.0) * constants.delta_time,
+        );
+
+        let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
+        let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
+        let mut output_pixel = get_pixel(output_buffer, screen_size, pos);
+        output_pixel.set_frac(channel_index, new_value);
     }
-
-    let pixel = get_pixel(trail_buffer, screen_size, pos);
-    let previous_value = pixel.get_frac(channel_index);
-    let blur_result = sum / 9.0;
-    let diffused_value = lerp(
-        previous_value,
-        blur_result,
-        (diffusion_speed / 100.0) * constants.delta_time,
-    );
-
-    let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
-    let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-    let mut output_pixel = get_pixel(output_buffer, screen_size, pos);
-    output_pixel.set_frac(channel_index, new_value);
 }
 
 
