@@ -152,7 +152,9 @@ impl SlotMouse {
                         ElementState::Released => {
                             if let Some(start) = self.mouse_click.take() {
                                 if start.time.elapsed() > Duration::from_secs_f32(3.0) {
-                                    configuration.show_menu = !configuration.show_menu;
+                                    if !configuration.show_menu {
+                                        configuration.show_menu = true;
+                                    }
                                 } else {
                                     match configuration.globals.click_mode {
                                         ClickMode::Disabled => {}
