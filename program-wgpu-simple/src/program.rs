@@ -158,18 +158,6 @@ impl Program<'_> {
     }
 
     pub(crate) fn on_loop(&mut self, output: &mut SurfaceTexture, start: &Instant, last_time: &mut Instant) {
-        if self.configuration.reset_trails {
-            self.configuration.reset_trails = false;
-            let bytes = Self::bytes_from_trail_map_size(self.program_buffers.screen_size);
-            self.program_init.queue.write_buffer(&self.program_buffers.trail_buffer, 0, &bytes);
-            self.program_init.queue.submit([]);
-        }
-        // Update buffers
-        if self.configuration.shader_config_changed {
-            let trail_stats_bytes = Self::bytes_from_trail_stats(&self.configuration);
-            self.program_init.queue.write_buffer(&self.program_init.trail_stats_buffer, 0, &trail_stats_bytes);
-            self.program_init.queue.submit([]);
-        }
 
         let time = start.elapsed().as_secs_f32();
         let mut delta_time = last_time.elapsed().as_secs_f32();
@@ -177,11 +165,11 @@ impl Program<'_> {
             delta_time = 0.0;
             self.first_frame = false;
         } else {
-            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
-            if delta_time < fixed_delta_time {
-                thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
-            }
-            delta_time = fixed_delta_time;
+        //     let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
+        //     if delta_time < fixed_delta_time {
+        //         thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
+        //     }
+        //     delta_time = fixed_delta_time;
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
@@ -193,6 +181,19 @@ impl Program<'_> {
             delta_time: delta_time * self.configuration.globals.time_scale,
             background_color: self.configuration.globals.background_color,
         };
+        if self.configuration.reset_trails {
+            self.configuration.reset_trails = false;
+            let bytes = Self::bytes_from_trail_map_size(self.program_buffers.screen_size);
+            self.program_init.queue.write_buffer(&self.program_buffers.trail_buffer, 0, &bytes);
+            self.program_init.queue.submit([]);
+            self.first_frame = true;
+        }
+        // Update buffers
+        if self.configuration.shader_config_changed {
+            let trail_stats_bytes = Self::bytes_from_trail_stats(&self.configuration);
+            self.program_init.queue.write_buffer(&self.program_init.trail_stats_buffer, 0, &trail_stats_bytes);
+            self.program_init.queue.submit([]);
+        }
         let frame = Frame {
             output,
             push_constants,

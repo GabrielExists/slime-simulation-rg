@@ -61,7 +61,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 190 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 700 },
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -70,7 +70,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 4000,
+            num_agents: 100000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -213,8 +213,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
-            num_agents: 4000,
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 800 },
+            num_agents: 100000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
