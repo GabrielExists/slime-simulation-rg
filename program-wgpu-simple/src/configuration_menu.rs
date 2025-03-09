@@ -236,7 +236,7 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     .logarithmic(true)
                     .text("Brush size"));
                 ui.separator();
-                if ui.button("Save preset").clicked() {
+                /* if ui.button("Save preset").clicked() {
                     if let Ok(save_file_string) = serde_json::to_string_pretty(&configuration) {
                         let picker_future = rfd::AsyncFileDialog::new()
                             .add_filter("text", &["json"])
@@ -251,7 +251,7 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         //     // let _ = fs::write(file_path, string);
                         // }
                     }
-                }
+                } */
             });
     }
 }

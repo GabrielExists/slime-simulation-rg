@@ -10,7 +10,6 @@ use winit::event::WindowEvent;
 use crate::configuration_menu;
 use crate::program::*;
 
-
 pub struct SlotEgui {
     pub state: State,
     pub renderer: Renderer,
@@ -19,7 +18,7 @@ pub struct SlotEgui {
 
 pub struct LocalState {
     // pub file_picker: Option<(String, Box<dyn std::future::Future<Output=Option<rfd::FileHandle>>>)>,
-    pub file_picker_handle: Option<(String, Box<dyn Future<Output=Option<rfd::FileHandle>> + Unpin>)>,
+    // pub file_picker_handle: Option<(String, Box<dyn Future<Output=Option<rfd::FileHandle>> + Unpin>)>,
     // pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
     pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
 }
@@ -51,7 +50,7 @@ impl Slot for SlotEgui {
             state: egui_state,
             renderer: egui_renderer,
             local_state: LocalState {
-                file_picker_handle: None,
+                // file_picker_handle: None,
                 file_write_handle: None,
             },
         }
@@ -64,7 +63,7 @@ impl Slot for SlotEgui {
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
         let mut ctx = futures::task::Context::from_waker(Waker::noop());
-        if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
+        /* if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
             let pinned = std::pin::pin!(picker_handle);
             match pinned.poll(&mut ctx) {
                 Poll::Ready(file_handle) => {
@@ -82,7 +81,7 @@ impl Slot for SlotEgui {
                 }
                 Poll::Pending => {}
             }
-        }
+        } */
 
         if let Some(write_handle) = &mut self.local_state.file_write_handle {
             let pinned = std::pin::pin!(write_handle);
