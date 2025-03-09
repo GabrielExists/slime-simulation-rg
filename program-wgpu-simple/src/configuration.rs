@@ -29,9 +29,18 @@ pub struct Globals {
     pub background_color: Color,
 }
 
+#[cfg(not(target_arch = "aarch64"))]
+const FIXED_DELTA_TIME: f32 = 1.0/120.0;
+#[cfg(not(target_arch = "aarch64"))]
+const TIME_SCALE: f32 = 2.0;
+#[cfg(target_arch = "aarch64")]
+const FIXED_DELTA_TIME: f32 = 1.0/8.0;
+#[cfg(target_arch = "aarch64")]
+const TIME_SCALE: f32 = 0.15;
+
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: 1.0 / 120.0,
-    time_scale: 2.0,
+    fixed_delta_time: FIXED_DELTA_TIME,
+    time_scale: TIME_SCALE,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 7.0,
@@ -61,7 +70,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 20000,
+            num_agents: 4000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -205,7 +214,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Green".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
-            num_agents: 20000,
+            num_agents: 4000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
