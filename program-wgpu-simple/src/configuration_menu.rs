@@ -6,7 +6,7 @@ use egui::{Slider, Ui};
 use egui::ComboBox;
 use egui_winit::State;
 use crate::configuration::DEFAULT_DISTANCE;
-use shared::{ClickMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
+use shared::{ClickMode, ColorMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
 use crate::slot_egui::LocalState;
 
 pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues, local_state: &mut LocalState) {
@@ -169,7 +169,18 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             trail_stats.color.inner.z = color[2];
                             trail_stats.color.inner.w = color[3];
                             ui.label("Color");
-                        })
+                        });
+                        let mut color_mode = trail_stats.color_mode.decode();
+                        ComboBox::from_label("Color mode")
+                            .selected_text(format!("{}", color_mode))
+                            .show_ui(ui, |ui| {
+                                selectable_value_pred(ui, &mut color_mode, |mode| matches!(mode, ColorMode::Disabled), ColorMode::Disabled);
+                                selectable_value_pred(ui, &mut color_mode, |mode| matches!(mode, ColorMode::Add), ColorMode::Add);
+                                selectable_value_pred(ui, &mut color_mode, |mode| matches!(mode, ColorMode::Subtract), ColorMode::Subtract);
+                                selectable_value_pred(ui, &mut color_mode, |mode| matches!(mode, ColorMode::Multiply), ColorMode::Multiply);
+                                selectable_value_pred(ui, &mut color_mode, |mode| matches!(mode, ColorMode::Divide), ColorMode::Divide);
+                            });
+                        trail_stats.color_mode = color_mode.encode();
                     });
                 }
 

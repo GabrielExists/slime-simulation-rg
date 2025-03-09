@@ -89,7 +89,7 @@ pub fn int_from_frac(value: f32) -> u32 {
 
 #[cfg(test)]
 mod test {
-    use crate::*;
+    use crate::pixel_view::*;
 
     #[test]
     fn test_set() {
@@ -119,20 +119,5 @@ mod test {
         assert!(f32::abs(pixel.y_frac() - 0.25) < 0.01);
         assert!(f32::abs(pixel.z_frac() - 0.75) < 0.01);
         assert!(f32::abs(pixel.w_frac() - 0.125) < 0.01);
-    }
-
-    #[test]
-    fn test_click_mode_encoding() {
-        for value in 0..u16::MAX as u32 {
-            let reference = ClickModeEncoded(value);
-            let click_mode = reference.decode();
-            let encoded = click_mode.encode();
-            match click_mode {
-                ClickMode::Disabled => {}
-                _ => {
-                    assert_eq!(reference.0, encoded.0)
-                }
-            }
-        }
     }
 }

@@ -303,12 +303,23 @@ pub fn main_fs(
     let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
     if is_inside_bounds(position, constants.screen_size) {
         let pixel = get_pixel(trail_buffer, constants.screen_size, position.as_uvec2());
-        let r = f32::min(pixel.x_frac() + pixel.w_frac() * 0.3, 1.0);
-        let g = f32::min(pixel.y_frac() + pixel.w_frac() * 0.3, 1.0);
-        let b = f32::min(pixel.z_frac() + pixel.w_frac() * 0.3, 1.0);
         let mut color = constants.background_color.inner;
         for i in 0..NUM_TRAIL_STATS {
-            color += pixel.get_frac(i) * trail_stats[i].color.inner;
+            match trail_stats[i].color_mode.decode() {
+                ColorMode::Disabled => {}
+                ColorMode::Add => {
+                    color += pixel.get_frac(i) * trail_stats[i].color.inner;
+                }
+                ColorMode::Subtract => {
+                    color -= pixel.get_frac(i) * trail_stats[i].color.inner;
+                }
+                ColorMode::Multiply => {
+                    color *= pixel.get_frac(i) * trail_stats[i].color.inner;
+                }
+                ColorMode::Divide => {
+                    color /= pixel.get_frac(i) * trail_stats[i].color.inner;
+                }
+            }
         }
         *output = color;
         // *output = vec4(r, g, b, 1.0)

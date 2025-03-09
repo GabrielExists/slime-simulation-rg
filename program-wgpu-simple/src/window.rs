@@ -6,7 +6,7 @@ use winit::{
 };
 #[cfg(target_arch = "aarch64")]
 use winit::window::Fullscreen;
-use crate::program::{Program, ProgramInit};
+use crate::program::Program;
 use crate::configuration::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 
 fn _print_type_name<T>(_: T) {

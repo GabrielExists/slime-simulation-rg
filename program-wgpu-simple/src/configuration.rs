@@ -35,7 +35,7 @@ pub const GLOBALS: Globals = Globals {
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(3),
     brush_size: 12.0,
-    background_color: Color::new(1.0 / 255.0, 3.0 / 255.0, 8.0 / 255.0, 1.0),
+    background_color: Color::new(0.002680536, 0.007457128, 0.019398617, 1.0),
 };
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
@@ -244,28 +244,28 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         evaporation_speed: 10.0,
         diffusion_speed: 180.0,
         padding_1: 0.0,
-        padding_2: 0.0,
-        color: Color::new(239.0/255.0, 122.0/255.0, 122.0/255.0, 1.0),
+        color_mode: ColorMode::Add.encode(),
+        color: Color::new(239.0 / 255.0, 122.0 / 255.0, 122.0 / 255.0, 1.0),
     },
     TrailStats {
         evaporation_speed: 50.0,
         diffusion_speed: 480.0,
         padding_1: 0.0,
-        padding_2: 0.0,
-        color: Color::new(54.0/255.0, 197.0/255.0, 83.0/255.0, 1.0),
+        color_mode: ColorMode::Add.encode(),
+        color: Color::new(54.0 / 255.0, 197.0 / 255.0, 83.0 / 255.0, 1.0),
     },
     TrailStats {
         evaporation_speed: 50.0,
         diffusion_speed: 480.0,
         padding_1: 0.0,
-        padding_2: 0.0,
-        color: Color::new(65.0/255.0, 127.0/255.0, 194.0/255.0, 1.0),
+        color_mode: ColorMode::Add.encode(),
+        color: Color::new(65.0 / 255.0, 127.0 / 255.0, 194.0 / 255.0, 1.0),
     },
     TrailStats {
         evaporation_speed: 1.0,
         diffusion_speed: 0.0,
         padding_1: 0.0,
-        padding_2: 0.0,
-        color: Color::new(233.0/255.0, 76.0/255.0, 76.0/255.0, 1.0),
+        color_mode: ColorMode::Add.encode(),
+        color: Color::new(233.0 / 255.0, 76.0 / 255.0, 76.0 / 255.0, 1.0),
     },
 ];

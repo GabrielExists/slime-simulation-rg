@@ -127,7 +127,7 @@ impl Slot for SlotDiffuse {
         self.buffers = buffers;
     }
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, _configuration: &mut ConfigurationValues) {
         // Run compute pass
         let mut compute_encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });

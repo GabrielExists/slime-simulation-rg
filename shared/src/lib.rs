@@ -167,6 +167,60 @@ impl ClickModeEncoded {
     }
 }
 
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, PartialEq)]
+#[repr(C)]
+pub enum ColorMode {
+    Disabled,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl Display for ColorMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColorMode::Disabled => f.write_str("Disabled"),
+            ColorMode::Add => f.write_str("Add"),
+            ColorMode::Subtract => f.write_str("Subtract"),
+            ColorMode::Multiply => f.write_str("Multiply"),
+            ColorMode::Divide => f.write_str("Divide"),
+        }
+    }
+}
+
+impl ColorMode {
+    pub const fn encode(self) -> ColorModeEncoded {
+        let number = match self {
+            ColorMode::Add => 0,
+            ColorMode::Subtract => 1,
+            ColorMode::Multiply => 2,
+            ColorMode::Divide => 3,
+            _ => 0xFF
+        };
+        ColorModeEncoded(number)
+    }
+}
+
+#[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
+#[derive(Copy, Clone, Pod, Zeroable, PartialEq)]
+#[repr(C)]
+pub struct ColorModeEncoded(u32);
+
+impl ColorModeEncoded {
+    pub fn decode(self) -> ColorMode {
+        match self.0 {
+            0 => ColorMode::Add,
+            1 => ColorMode::Subtract,
+            2 => ColorMode::Multiply,
+            3 => ColorMode::Divide,
+            _ => ColorMode::Disabled
+        }
+    }
+}
+
 #[derive(Copy, Clone, Pod, Zeroable)]
 #[repr(C)]
 pub struct ShaderConstants {
@@ -237,7 +291,7 @@ pub struct TrailStats {
     // Reaching 63% takes 1 second if set to 100%.
     pub diffusion_speed: f32,
     pub padding_1: f32,
-    pub padding_2: f32,
+    pub color_mode: ColorModeEncoded,
     pub color: Color,
 }
 
@@ -334,3 +388,38 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     x * x * (3.0 - 2.0 * x)
 }
 
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn test_click_mode_encoding() {
+        for value in 0..u16::MAX as u32 {
+            let reference = ClickModeEncoded(value);
+            let click_mode = reference.decode();
+            let encoded = click_mode.encode();
+            match click_mode {
+                ClickMode::Disabled => {}
+                _ => {
+                    assert_eq!(reference.0, encoded.0)
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_color_mode_encoding() {
+        for value in 0..u16::MAX as u32 {
+            let reference = ColorModeEncoded(value);
+            let click_mode = reference.decode();
+            let encoded = click_mode.encode();
+            match click_mode {
+                ColorMode::Disabled => {}
+                _ => {
+                    assert_eq!(reference.0, encoded.0)
+                }
+            }
+        }
+    }
+}
