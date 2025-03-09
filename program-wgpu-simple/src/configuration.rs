@@ -30,11 +30,11 @@ pub struct Globals {
 }
 
 #[cfg(not(target_arch = "aarch64"))]
-const FIXED_DELTA_TIME: f32 = 1.0/120.0;
+const FIXED_DELTA_TIME: f32 = 1.0 / 80.0;
 #[cfg(not(target_arch = "aarch64"))]
 const TIME_SCALE: f32 = 2.0;
 #[cfg(target_arch = "aarch64")]
-const FIXED_DELTA_TIME: f32 = 1.0/8.0;
+const FIXED_DELTA_TIME: f32 = 1.0 / 8.0;
 #[cfg(target_arch = "aarch64")]
 const TIME_SCALE: f32 = 0.15;
 
@@ -44,7 +44,7 @@ pub const GLOBALS: Globals = Globals {
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 7.0,
-    background_color: Color::new(0.002680536, 0.007457128, 0.019398617, 1.0),
+    background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
 };
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
@@ -61,7 +61,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 700 },
+            spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 380 },
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -73,11 +73,11 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             num_agents: 100000,
             shader_stats: AgentStats {
                 velocity: 65.0,
-                turn_speed: 80.0,
+                turn_speed: 30.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 15.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
@@ -97,7 +97,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                     TrailInteraction {
                         attraction: 0.2,
-                        addition: 1.0 / 5.0,
+                        addition: 1.0 / 20.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
@@ -176,7 +176,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 25.0,
+                sensor_offset: 45.0,
                 timeout: 50.0,
                 timeout_conversion: 0,
                 interaction_channels: [
@@ -213,7 +213,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 800 },
+            spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 360 },
             num_agents: 100000,
             shader_stats: AgentStats {
                 velocity: 65.0,
@@ -221,7 +221,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 15.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
@@ -234,7 +234,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                     TrailInteraction {
                         attraction: 1.0,
-                        addition: 1.0 / 5.0,
+                        addition: 1.0 / 20.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
                         conversion: 0,
@@ -256,8 +256,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 ],
             },
         },
-
-
         AgentStatsAll {
             name: "RedToGreen".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
@@ -322,7 +320,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 25.0,
+                sensor_offset: 45.0,
                 timeout: 50.0,
                 timeout_conversion: 3,
                 interaction_channels: [

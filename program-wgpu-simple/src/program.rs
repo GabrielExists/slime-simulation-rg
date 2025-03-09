@@ -165,11 +165,11 @@ impl Program<'_> {
             delta_time = 0.0;
             self.first_frame = false;
         } else {
-        //     let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
-        //     if delta_time < fixed_delta_time {
-        //         thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
-        //     }
-        //     delta_time = fixed_delta_time;
+            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
+            if delta_time < fixed_delta_time {
+                thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
+            }
+            delta_time = fixed_delta_time;
         }
         *last_time = std::time::Instant::now();
         let push_constants = ShaderConstants {
