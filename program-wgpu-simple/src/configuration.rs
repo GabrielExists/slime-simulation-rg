@@ -385,6 +385,6 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(0.3, 0.3, 0.3, 1.0),
+        color: Color::new(0.05, 0.05, 0.05, 1.0),
     },
 ];
