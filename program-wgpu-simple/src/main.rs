@@ -70,6 +70,8 @@ rust_2018_idioms
 #![feature(noop_waker)]
 
 
+extern crate shared;
+
 mod window;
 mod program;
 mod slot_render;

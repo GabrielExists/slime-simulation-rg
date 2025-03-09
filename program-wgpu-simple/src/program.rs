@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::thread;
 use std::time::{Duration, Instant};
 use crate::configuration::create_agent_stats_all;
@@ -9,7 +10,7 @@ use wgpu::SurfaceTexture;
 use winit::dpi::PhysicalSize;
 use winit::event::{WindowEvent};
 use wgpu::util::DeviceExt;
-use shared::{ShaderConstants, INTS_PER_PIXEL};
+use shared::{ShaderConstants, INTS_PER_PIXEL, Color};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::slot_mouse::SlotMouse;
@@ -29,12 +30,24 @@ pub struct Program<'window> {
 }
 
 // Data that is created at program init
-pub struct ProgramInit<'window> {
+pub struct Handles<'window> {
     pub device: &'window wgpu::Device,
     pub surface_format: &'window wgpu::TextureFormat,
     pub module: &'window wgpu::ShaderModule,
     pub queue: &'window wgpu::Queue,
     pub window: &'window winit::window::Window,
+}
+
+pub struct ProgramInit<'window> {
+    pub handles: Handles<'window>,
+    pub trail_stats_buffer: wgpu::Buffer,
+}
+impl<'window> Deref for ProgramInit<'window> {
+    type Target = Handles<'window>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.handles
+    }
 }
 
 // Data regenerated when window is resized
@@ -67,7 +80,7 @@ pub trait Slot {
 }
 
 impl Program<'_> {
-    pub fn new(program_init: ProgramInit<'_>) -> Program<'_> {
+    pub fn new(handles: Handles<'_>) -> Program<'_> {
         let configuration = ConfigurationValues {
             shader_config_changed: false,
             globals: GLOBALS,
@@ -79,6 +92,20 @@ impl Program<'_> {
             reset_trails: false,
             playing: true,
         };
+
+        let trail_stats_bytes = Self::bytes_from_trail_stats(&configuration);
+        let trail_stats_buffer = handles.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Trail buffer"),
+            contents: &trail_stats_bytes,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
+        let program_init = ProgramInit {
+            handles,
+            trail_stats_buffer,
+        };
+
         let program_buffers = Self::create_buffers(&program_init);
         let slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
         let slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
@@ -137,6 +164,13 @@ impl Program<'_> {
             self.program_init.queue.write_buffer(&self.program_buffers.trail_buffer, 0, &bytes);
             self.program_init.queue.submit([]);
         }
+        // Update buffers
+        if self.configuration.shader_config_changed {
+            let trail_stats_bytes = Self::bytes_from_trail_stats(&self.configuration);
+            self.program_init.queue.write_buffer(&self.program_init.trail_stats_buffer, 0, &trail_stats_bytes);
+            self.program_init.queue.submit([]);
+        }
+
         let time = start.elapsed().as_secs_f32();
         let mut delta_time = last_time.elapsed().as_secs_f32();
         if self.first_frame {
@@ -157,6 +191,7 @@ impl Program<'_> {
             ),
             time,
             delta_time: delta_time * self.configuration.globals.time_scale,
+            background_color: self.configuration.globals.background_color,
         };
         let frame = Frame {
             output,
@@ -188,6 +223,12 @@ impl Program<'_> {
             .flat_map(u32::to_ne_bytes)
             .collect::<Vec<_>>();
         empty_bytes
+    }
+    fn bytes_from_trail_stats(configuration: &ConfigurationValues) -> Vec<u8> {
+        let trail_stats_bytes = configuration.trail_stats.iter().flat_map(|trail_stats|
+            bytemuck::bytes_of(trail_stats).to_vec()
+        ).collect::<Vec<_>>();
+        trail_stats_bytes
     }
 }
 

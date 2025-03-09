@@ -8,6 +8,7 @@ mod lerp_test;
 use core::f32::consts::PI;
 use glam::{Vec2, Vec4, vec2, UVec3, vec4};
 use shared::*;
+use shared::pixel_view::*;
 use spirv_std::{glam, spirv};
 use spirv_std::glam::{IVec2, ivec2, UVec2, uvec2};
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
@@ -295,7 +296,8 @@ fn within_range(first: Vec2, second: Vec2, distance: f32) -> bool {
 pub fn main_fs(
     #[spirv(frag_coord)] in_frag_coord: Vec4,
     #[spirv(push_constant)] constants: &ShaderConstants,
-    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_stats: &[TrailStats],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
     output: &mut Vec4,
 ) {
     let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
@@ -304,7 +306,12 @@ pub fn main_fs(
         let r = f32::min(pixel.x_frac() + pixel.w_frac() * 0.3, 1.0);
         let g = f32::min(pixel.y_frac() + pixel.w_frac() * 0.3, 1.0);
         let b = f32::min(pixel.z_frac() + pixel.w_frac() * 0.3, 1.0);
-        *output = vec4(r, g, b, 1.0)
+        let mut color = constants.background_color.inner;
+        for i in 0..NUM_TRAIL_STATS {
+            color += pixel.get_frac(i) * trail_stats[i].color.inner;
+        }
+        *output = color;
+        // *output = vec4(r, g, b, 1.0)
         // let value = pixel.w_frac();
         // *output = vec4(value, value, value, 1.0)
     } else {

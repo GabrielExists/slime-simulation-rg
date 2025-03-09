@@ -1,27 +1,29 @@
 //! Ported to Rust from <https://github.com/Tw1ddle/Sky-Shader/blob/master/src/shaders/glsl/sky.fragment>
-
 #![cfg_attr(target_arch = "spirv", no_std)]
 
-extern crate bytemuck;
-extern crate spirv_std;
-
-#[cfg(not(target_arch = "spirv"))]
-use std::fmt::{Display, Formatter};
-#[cfg(not(target_arch = "spirv"))]
-use serde::{Serialize, Deserialize};
-
+pub mod pixel_view;
 use core::f32::consts::PI;
-use glam::{Vec3, vec3};
-
 use spirv_std::glam;
+use glam::{Vec3, vec3, UVec2, Vec2, Vec4};
+use bytemuck::{Pod, Zeroable};
 
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
 // we tie #[no_std] above to the same condition, so it's fine.
 #[cfg(target_arch = "spirv")]
 use spirv_std::num_traits::Float;
 
-use bytemuck::{Pod, Zeroable};
-use spirv_std::glam::{UVec2, Vec2};
+#[cfg(not(target_arch = "spirv"))]
+use std::fmt::{Display, Formatter};
+// #[cfg(not(target_arch = "spirv"))]
+// use std::fmt::format;
+#[cfg(not(target_arch = "spirv"))]
+use serde::{Serialize, Deserialize};
+#[cfg(not(target_arch = "spirv"))]
+use serde::ser::SerializeSeq;
+#[cfg(not(target_arch = "spirv"))]
+use serde::{Deserializer, Serializer};
+#[cfg(not(target_arch = "spirv"))]
+use serde::de::{SeqAccess, Visitor};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq)]
@@ -171,6 +173,7 @@ pub struct ShaderConstants {
     pub screen_size: UVec2,
     pub time: f32,
     pub delta_time: f32,
+    pub background_color: Color,
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -205,6 +208,7 @@ pub struct AgentStats {
     pub timeout_conversion: u32,
     pub interaction_channels: [TrailInteraction; NUM_TRAIL_STATS],
 }
+
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Default, Pod, Zeroable)]
 #[repr(C)]
@@ -232,6 +236,64 @@ pub struct TrailStats {
     // Reaching 86% takes 1 second if set to 200%.
     // Reaching 63% takes 1 second if set to 100%.
     pub diffusion_speed: f32,
+    pub padding_1: f32,
+    pub padding_2: f32,
+    pub color: Color,
+}
+
+#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
+#[repr(C)]
+pub struct Color {
+    pub inner: Vec4,
+}
+impl Color {
+    pub const fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Color {
+            inner: Vec4::new(r, g, b, a),
+        }
+    }
+}
+#[cfg(not(target_arch = "spirv"))]
+impl Serialize for Color {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let mut seq  = serializer.serialize_seq(Some(4))?;
+        seq.serialize_element(&self.inner.x)?;
+        seq.serialize_element(&self.inner.y)?;
+        seq.serialize_element(&self.inner.z)?;
+        seq.serialize_element(&self.inner.w)?;
+        seq.end()
+    }
+}
+#[cfg(not(target_arch = "spirv"))]
+struct ColorVisitor;
+#[cfg(not(target_arch = "spirv"))]
+impl<'de> Visitor<'de> for ColorVisitor {
+    type Value = Color;
+
+    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+        formatter.write_str("array of four floats")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
+        if let Some(x) = seq.next_element()? {
+            if let Some(y) = seq.next_element()? {
+                if let Some(z) = seq.next_element()? {
+                    if let Some(w) = seq.next_element()? {
+                        return Ok(Color {
+                            inner: Vec4::new(x, y, z, w)
+                        })
+                    }
+                }
+            }
+        }
+        Err(serde::de::Error::custom("missing items when deserializing color"))
+    }
+}
+#[cfg(not(target_arch = "spirv"))]
+impl<'de> Deserialize<'de> for Color {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        deserializer.deserialize_seq(ColorVisitor)
+    }
 }
 
 #[derive(Copy, Clone, Pod, Zeroable)]
@@ -272,141 +334,3 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     x * x * (3.0 - 2.0 * x)
 }
 
-pub struct PixelView<'storage> {
-    storage_one: &'storage mut u32,
-    storage_two: &'storage mut u32,
-}
-
-impl<'storage> PixelView<'storage> {
-    pub fn new(storage_one: &'storage mut u32, storage_two: &'storage mut u32) -> Self {
-        PixelView {
-            storage_one,
-            storage_two,
-        }
-    }
-    pub fn x(&self) -> u32 { *self.storage_one >> 0 & 0xFFFF }
-    pub fn y(&self) -> u32 { *self.storage_one >> 16 & 0xFFFF }
-    pub fn z(&self) -> u32 { *self.storage_two >> 0 & 0xFFFF }
-    pub fn w(&self) -> u32 { *self.storage_two >> 16 & 0xFFFF }
-    pub fn get(&self, index: usize) -> u32 {
-        match index {
-            0 => self.x(),
-            1 => self.y(),
-            2 => self.z(),
-            _ => self.w(),
-        }
-    }
-    pub fn x_frac(&self) -> f32 { frac_from_int(self.x()) }
-    pub fn y_frac(&self) -> f32 { frac_from_int(self.y()) }
-    pub fn z_frac(&self) -> f32 { frac_from_int(self.z()) }
-    pub fn w_frac(&self) -> f32 { frac_from_int(self.w()) }
-    pub fn get_frac(&self, index: usize) -> f32 {
-        frac_from_int(self.get(index))
-    }
-    pub fn set_x(&mut self, value: u32) {
-        *self.storage_one = *self.storage_one & 0xFFFF0000 | (value & 0xFFFF) << 0;
-    }
-    pub fn set_y(&mut self, value: u32) {
-        *self.storage_one = *self.storage_one & 0x0000FFFF | ((value & 0xFFFF) << 16);
-    }
-    pub fn set_z(&mut self, value: u32) {
-        *self.storage_two = *self.storage_two & 0xFFFF0000 | (value & 0xFFFF) << 0;
-    }
-    pub fn set_w(&mut self, value: u32) {
-        *self.storage_two = *self.storage_two & 0x0000FFFF | ((value & 0xFFFF) << 16);
-    }
-    pub fn set(&mut self, index: usize, value: u32) {
-        match index {
-            0 => self.set_x(value),
-            1 => self.set_y(value),
-            2 => self.set_z(value),
-            _ => self.set_w(value),
-        }
-    }
-    pub fn set_x_frac(&mut self, value: f32) {
-        self.set_x(int_from_frac(value))
-    }
-    pub fn set_y_frac(&mut self, value: f32) {
-        self.set_y(int_from_frac(value))
-    }
-    pub fn set_z_frac(&mut self, value: f32) {
-        self.set_z(int_from_frac(value))
-    }
-    pub fn set_w_frac(&mut self, value: f32) {
-        self.set_w(int_from_frac(value))
-    }
-    pub fn set_frac(&mut self, index: usize, value: f32) {
-        match index {
-            0 => self.set_x_frac(value),
-            1 => self.set_y_frac(value),
-            2 => self.set_z_frac(value),
-            _ => self.set_w_frac(value),
-        }
-    }
-}
-
-
-
-pub const PIXEL_MAX: u32 = 2u32.pow(15) - 1;
-
-pub fn frac_from_int(value: u32) -> f32 {
-    value as f32 / PIXEL_MAX as f32
-}
-
-pub fn int_from_frac(value: f32) -> u32 {
-    if value > 0.999 {
-        PIXEL_MAX
-    } else {
-        (value * PIXEL_MAX as f32) as u32
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::*;
-
-    #[test]
-    fn test_set() {
-        let mut a = 0x12345678;
-        let mut b = 0x98765432;
-        let mut pixel = PixelView::new(&mut a, &mut b);
-        pixel.set_x(0x2BCD);
-        pixel.set_y(0x4DEF);
-        pixel.set_z(0xFEDC);
-        pixel.set_w(0xBA87);
-        assert_eq!(pixel.x(), 0x2BCD);
-        assert_eq!(pixel.y(), 0x4DEF);
-        assert_eq!(pixel.z(), 0xFEDC);
-        assert_eq!(pixel.w(), 0xBA87);
-    }
-
-    #[test]
-    fn test_set_frac() {
-        let mut a = 0x12345678;
-        let mut b = 0x98765432;
-        let mut pixel = PixelView::new(&mut a, &mut b);
-        pixel.set_x_frac(0.5);
-        pixel.set_y_frac(0.25);
-        pixel.set_z_frac(0.75);
-        pixel.set_w_frac(0.125);
-        assert!(f32::abs(pixel.x_frac() - 0.5) < 0.01);
-        assert!(f32::abs(pixel.y_frac() - 0.25) < 0.01);
-        assert!(f32::abs(pixel.z_frac() - 0.75) < 0.01);
-        assert!(f32::abs(pixel.w_frac() - 0.125) < 0.01);
-    }
-
-    #[test]
-    fn test_click_mode_encoding() {
-        for value in 0..u16::MAX as u32 {
-            let reference = ClickModeEncoded(value);
-            let click_mode = reference.decode();
-            let encoded = click_mode.encode();
-            match click_mode {
-                ClickMode::Disabled => {}
-                _ => {
-                    assert_eq!(reference.0, encoded.0)
-                }
-            }
-        }
-    }
-}

@@ -156,6 +156,20 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                             .text("Evaporation speed"));
                         ui.add(Slider::new(&mut trail_stats.diffusion_speed, 0.0..=1000.0)
                             .text("Diffusion speed"));
+                        ui.horizontal(|ui| {
+                            let mut color = [
+                                trail_stats.color.inner.x,
+                                trail_stats.color.inner.y,
+                                trail_stats.color.inner.z,
+                                trail_stats.color.inner.w,
+                            ];
+                            ui.color_edit_button_rgba_unmultiplied(&mut color);
+                            trail_stats.color.inner.x = color[0];
+                            trail_stats.color.inner.y = color[1];
+                            trail_stats.color.inner.z = color[2];
+                            trail_stats.color.inner.w = color[3];
+                            ui.label("Color");
+                        })
                     });
                 }
 
@@ -171,6 +185,20 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                     if ui.button("+").clicked() {
                         configuration.scale_factor = (configuration.scale_factor + 0.1).min(3.0);
                     }
+                });
+                ui.horizontal(|ui| {
+                    let mut color = [
+                        configuration.globals.background_color.inner.x,
+                        configuration.globals.background_color.inner.y,
+                        configuration.globals.background_color.inner.z,
+                        configuration.globals.background_color.inner.w,
+                    ];
+                    ui.color_edit_button_rgba_unmultiplied(&mut color);
+                    configuration.globals.background_color.inner.x = color[0];
+                    configuration.globals.background_color.inner.y = color[1];
+                    configuration.globals.background_color.inner.z = color[2];
+                    configuration.globals.background_color.inner.w = color[3];
+                    ui.label("Background color");
                 });
                 let click_mode = &mut configuration.globals.click_mode;
                 ComboBox::from_label("Click mode")

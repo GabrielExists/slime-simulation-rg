@@ -1,3 +1,4 @@
+use crate::program::Handles;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -159,14 +160,14 @@ async fn run_inner(
     let module_raw = wgpu::include_spirv_raw!(env!("shader_slime.spv"));
     let module = create_module(module_raw);
 
-    let program_init = ProgramInit {
+    let handles = Handles {
         device: &device,
         surface_format: &surface_format,
         module: &module,
         queue: &queue,
         window: &window,
     };
-    let mut program = Program::new(program_init);
+    let mut program = Program::new(handles);
 
     let start = std::time::Instant::now();
     let mut last_time = start;

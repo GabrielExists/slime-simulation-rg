@@ -13,7 +13,6 @@ pub struct SlotDiffuse {
 pub struct SlotDiffuseInit {
     pub pipeline: wgpu::ComputePipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
-    pub trail_stats_buffer: wgpu::Buffer,
 }
 
 pub struct SlotDiffuseBuffers {
@@ -25,16 +24,7 @@ impl Slot for SlotDiffuse {
     type Init = SlotDiffuseInit;
     type Buffers = SlotDiffuseBuffers;
 
-    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
-        let trail_stats_bytes = Self::bytes_from_trail_stats(configuration);
-        let trail_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Trail buffer"),
-            contents: &trail_stats_bytes,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::COPY_SRC,
-        });
-
+    fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, _configuration: &ConfigurationValues) -> Self {
         let bind_group_layout = program_init.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[
@@ -93,7 +83,6 @@ impl Slot for SlotDiffuse {
         let init = SlotDiffuseInit {
             pipeline,
             bind_group_layout,
-            trail_stats_buffer,
         };
         let buffers = Self::create_buffers(program_init, program_buffers, &init);
         Self {
@@ -115,7 +104,7 @@ impl Slot for SlotDiffuse {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: init.trail_stats_buffer.as_entire_binding(),
+                    resource: program_init.trail_stats_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -139,12 +128,6 @@ impl Slot for SlotDiffuse {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, program_frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
-        // Update buffers
-        if configuration.shader_config_changed {
-            let trail_stats_bytes = Self::bytes_from_trail_stats(configuration);
-            program_init.queue.write_buffer(&self.init.trail_stats_buffer, 0, &trail_stats_bytes);
-            program_init.queue.submit([]);
-        }
         // Run compute pass
         let mut compute_encoder =
             program_init.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -162,14 +145,5 @@ impl Slot for SlotDiffuse {
             cpass.dispatch_workgroups(program_buffers.screen_size.width.div_ceil(8), program_buffers.screen_size.height.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
-    }
-}
-
-impl SlotDiffuse {
-    fn bytes_from_trail_stats(configuration: &ConfigurationValues) -> Vec<u8> {
-        let trail_stats_bytes = configuration.trail_stats.iter().flat_map(|trail_stats|
-            bytemuck::bytes_of(trail_stats).to_vec()
-        ).collect::<Vec<_>>();
-        trail_stats_bytes
     }
 }

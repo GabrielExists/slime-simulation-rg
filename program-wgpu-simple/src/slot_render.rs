@@ -36,6 +36,16 @@ impl Slot for SlotRender {
                     ty: wgpu::BindingType::Buffer {
                         has_dynamic_offset: false,
                         min_binding_size: None,
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    },
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    count: None,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
                         ty: wgpu::BufferBindingType::Storage { read_only: false },
                     },
                 },
@@ -106,6 +116,10 @@ impl Slot for SlotRender {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
+                    resource: program_init.trail_stats_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
                     resource: program_buffers.trail_buffer.as_entire_binding(),
                 },
             ],
