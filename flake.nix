@@ -16,6 +16,7 @@
       with pkgs; rec {
         devShell = mkShell rec {
           buildInputs = [
+            stdenv.cc.cc.lib
             libxkbcommon
             libGL
             vulkan-loader
