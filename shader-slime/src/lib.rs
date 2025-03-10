@@ -215,6 +215,7 @@ pub fn diffuse_cs(
 ) {
     let pos = uvec2(id.x, id.y);
     let map_size = constants.map_size;
+
     if !is_inside_bounds_u(pos, map_size) {
         return;
     }

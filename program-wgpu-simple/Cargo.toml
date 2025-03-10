@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-wgpu = { version = "22.1", features = ["spirv", "vulkan-portability"]}
+wgpu = { version = "22.1", features = ["spirv", "vulkan-portability", "webgl"]}
 winit = { version = "0.30.0", features = ["android-native-activity", "rwh_05"] }
 bytemuck = { workspace = true, features = ["derive"] }
 futures = { version = "0.3", default-features = false, features = ["std", "executor"] }

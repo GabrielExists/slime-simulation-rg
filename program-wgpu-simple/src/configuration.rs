@@ -47,7 +47,7 @@ const TIME_SCALE: f32 = 2.0;
 
 pub const GLOBALS: Globals = Globals {
     time_step: 1.0/60.0,
-    max_frame_rate: 4.0,
+    max_frame_rate: 30.0,
     smoothen_after_max_frame_rate: true,
     compute_steps_per_render: 12,
     click_mode: ClickMode::PaintTrail(0),

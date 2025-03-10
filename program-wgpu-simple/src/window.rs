@@ -62,7 +62,7 @@ async fn run_inner(
 ) {
     // Common in compute and graphics
     let backends = wgpu::util::backend_bits_from_env()
-        .unwrap_or(wgpu::Backends::VULKAN | wgpu::Backends::METAL | wgpu::Backends::GL);
+        .unwrap_or(wgpu::Backends::BROWSER_WEBGPU);
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
         dx12_shader_compiler: wgpu::util::dx12_shader_compiler_from_env().unwrap_or_default(),
