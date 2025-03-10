@@ -204,7 +204,7 @@ fn is_inside_bounds_u(position: UVec2, map_size: UVec2) -> bool {
 }
 
 
-const ENABLE_BLUR: bool = false;
+const ENABLE_BLUR: bool = true;
 #[spirv(compute(threads(8, 8, 1)))]
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,

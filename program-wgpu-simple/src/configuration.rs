@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use shared::*;
 
-pub const DEFAULT_WIDTH: u32 = 800;
-pub const DEFAULT_HEIGHT: u32 = 480;
-pub const DEFAULT_MAP_WIDTH: u32 = DEFAULT_WIDTH / 5;
-pub const DEFAULT_MAP_HEIGHT: u32 = DEFAULT_HEIGHT / 5;
-pub const DEFAULT_DISTANCE: u32 = DEFAULT_MAP_HEIGHT / 2;
+pub const DEFAULT_WIDTH: u32 = 1280;
+pub const DEFAULT_HEIGHT: u32 = 720;
+pub const DEFAULT_MAP_WIDTH: u32 = DEFAULT_WIDTH;
+pub const DEFAULT_MAP_HEIGHT: u32 = DEFAULT_HEIGHT;
+pub const DEFAULT_DISTANCE: u32 = 230;
 pub const RESIZE_MAP_WITH_WINDOW: bool = false;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -38,11 +38,11 @@ pub struct Globals {
 
 pub const GLOBALS: Globals = Globals {
     time_step: 1.0/60.0,
-    max_frame_rate: 30.0,
+    max_frame_rate: 60.0,
     smoothen_after_max_frame_rate: true,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
-    brush_size: 5.0,
+    brush_size: 7.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
     map_width: if RESIZE_MAP_WITH_WINDOW { DEFAULT_WIDTH } else { DEFAULT_MAP_WIDTH },
     map_height: if RESIZE_MAP_WITH_WINDOW { DEFAULT_HEIGHT } else { DEFAULT_MAP_HEIGHT },
@@ -71,7 +71,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 1500,
+            num_agents: 20000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -124,7 +124,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 3.0,
-                timeout: 4.0,
+                timeout: 5.0,
                 timeout_conversion: 2,
                 interaction_channels: [
                     TrailInteraction {
@@ -178,7 +178,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 25.0,
-                timeout: 15.0,
+                timeout: 50.0,
                 timeout_conversion: 0,
                 interaction_channels: [
                     TrailInteraction {
@@ -215,7 +215,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Green".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE - 10 },
-            num_agents: 1500,
+            num_agents: 20000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -268,7 +268,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 3.0,
-                timeout: 4.0,
+                timeout: 5.0,
                 timeout_conversion: 5,
                 interaction_channels: [
                     TrailInteraction {
@@ -322,7 +322,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 25.0,
-                timeout: 15.0,
+                timeout: 50.0,
                 timeout_conversion: 3,
                 interaction_channels: [
                     TrailInteraction {
@@ -393,6 +393,6 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(0.10, 0.10, 0.10, 1.0),
+        color: Color::new(0.05, 0.05, 0.05, 1.0),
     },
 ];
