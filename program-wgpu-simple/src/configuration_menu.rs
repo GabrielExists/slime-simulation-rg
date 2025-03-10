@@ -1,4 +1,5 @@
-use std::path::{PathBuf};
+#[cfg(feature = "save-preset")]
+use std::path::PathBuf;
 use crate::configuration::ConfigurationValues;
 use winit::dpi::PhysicalSize;
 use crate::configuration::TRAIL_NAMES;
@@ -38,10 +39,15 @@ pub fn render_configuration_menu(
                         configuration.reset_trails = true;
                     }
                 });
-                if ui.button("Respawn and reset trails").clicked() {
-                    configuration.respawn = true;
-                    configuration.reset_trails = true;
-                }
+                ui.horizontal(|ui| {
+                    if ui.button("Respawn and reset trails").clicked() {
+                        configuration.respawn = true;
+                        configuration.reset_trails = true;
+                    }
+                    if ui.button("Quit").clicked() {
+                        configuration.quit = true;
+                    }
+                });
                 for agent_stats in configuration.agent_stats.iter_mut() {
                     let spawn = &mut agent_stats.spawn_mode;
                     ui.collapsing(format!("Agent {}", agent_stats.name), |ui| {
@@ -80,7 +86,7 @@ pub fn render_configuration_menu(
                         ui.separator();
                         ui.label("Applies on reset:");
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
-                        ui.add(Slider::new(&mut agent_stats.num_agents, 5..=1000000)
+                        ui.add(Slider::new(&mut agent_stats.num_agents, 0..=1000000)
                             .text("Num agents").logarithmic(true));
                         ComboBox::from_label("Spawn mode")
                             .selected_text(format!("{}", spawn))

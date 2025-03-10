@@ -2,8 +2,9 @@ use crate::{
     configuration::RESIZE_MAP_WITH_WINDOW,
     program::Handles,
     program::Program,
-    configuration::{DEFAULT_HEIGHT, DEFAULT_WIDTH}
 };
+#[cfg(not(target_arch = "aarch64"))]
+use crate::configuration::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -253,7 +254,10 @@ async fn run_inner(
                             return;
                         }
                     };
-                    program.on_loop(&mut output, &start, &mut last_time);
+                    let continue_running = program.on_loop(&mut output, &start, &mut last_time);
+                    if !continue_running {
+                        event_loop_window_target.exit();
+                    }
 
                     output.present();
                 }

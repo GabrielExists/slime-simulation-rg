@@ -55,13 +55,13 @@ pub fn main_cs(
 
     match (weight_left, weight_forward, weight_right) {
         (None, _, Some(_)) => {
-            agent.angle -= random_steer_strength * turn_speed_avoidance * constants.delta_time;
+            agent.angle -= random_steer_strength * turn_speed_avoidance * constants.time_step;
         }
         (Some(_), _, None) => {
-            agent.angle += random_steer_strength * turn_speed_avoidance * constants.delta_time;
+            agent.angle += random_steer_strength * turn_speed_avoidance * constants.time_step;
         }
         (Some(_), None, Some(_)) => {
-            agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed_avoidance * constants.delta_time;
+            agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed_avoidance * constants.time_step;
         }
         (None, _, None) => {
             agent.angle += 0.0;
@@ -73,19 +73,19 @@ pub fn main_cs(
             }
             // If edges are stronger than center, pick a direction randomly
             else if weight_left > weight_forward && weight_right > weight_forward {
-                agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed * constants.delta_time;
+                agent.angle += (random_steer_strength - 0.5) * 2.0 * turn_speed * constants.time_step;
             }
             // If there's a gradient in one direction, turn that way
             else if weight_right > weight_left {
-                agent.angle -= random_steer_strength * turn_speed * constants.delta_time;
+                agent.angle -= random_steer_strength * turn_speed * constants.time_step;
             } else if weight_left > weight_right {
-                agent.angle += random_steer_strength * turn_speed * constants.delta_time;
+                agent.angle += random_steer_strength * turn_speed * constants.time_step;
             }
         }
     }
 
     // Render each pixel inbetween here and the end of the streak we move this frame
-    let mut num_steps = agent_stats.velocity * constants.delta_time;
+    let mut num_steps = agent_stats.velocity * constants.time_step;
     let step_size = 1.0;
     let mut step_pos = vec2(agent.x, agent.y);
     let bounds: Bounds = 'clamp_block: loop {
@@ -122,7 +122,7 @@ pub fn main_cs(
     agent.y = step_pos.y;
 
     if agent_stats.timeout > 0.01 {
-        agent.countdown -= constants.delta_time;
+        agent.countdown -= constants.time_step;
         if agent.countdown <= 0.0 && agent_stats.timeout_conversion < NUM_AGENT_TYPES as u32 {
             agent.agent_type = agent_stats.timeout_conversion;
             agent.countdown = agent_stats_buffer[agent_stats.timeout_conversion as usize].timeout;
@@ -204,7 +204,7 @@ fn is_inside_bounds_u(position: UVec2, map_size: UVec2) -> bool {
 }
 
 
-const ENABLE_BLUR: bool = true;
+const ENABLE_BLUR: bool = false;
 #[spirv(compute(threads(8, 8, 1)))]
 pub fn diffuse_cs(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -240,11 +240,11 @@ pub fn diffuse_cs(
             value = lerp(
                 value,
                 blur_result,
-                (diffusion_speed / 100.0) * constants.delta_time,
+                (diffusion_speed / 100.0) * constants.time_step,
             );
         }
 
-        let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
+        let evaporation_this_tick = (evaporation_speed / 100.0) * constants.time_step;
         let new_value = f32::max(0.0, value - evaporation_this_tick);
         let mut output_pixel = get_pixel(output_buffer, map_size, pos);
         output_pixel.set_frac(channel_index, new_value);
@@ -258,14 +258,14 @@ pub fn mouse_cs(
     #[spirv(push_constant)] mouse_constants: &MouseConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
 ) {
-    let map_pos = uvec2(id.x, id.y);
-    if !is_inside_bounds_u(map_pos, mouse_constants.map_size) {
-        return;
-    }
-    let screen_pos = screen_from_map_pos(map_pos, mouse_constants.map_size, mouse_constants.screen_size);
-
     if mouse_constants.mouse_down != 0 {
-        if within_range(screen_pos.as_vec2(), mouse_constants.mouse_position, mouse_constants.brush_size as f32) {
+        let map_pos = uvec2(id.x, id.y);
+        if !is_inside_bounds_u(map_pos, mouse_constants.map_size) {
+            return;
+        }
+        let screen_pos = screen_from_map_pos(map_pos, mouse_constants.map_size, mouse_constants.screen_size);
+        let brush_size = (mouse_constants.brush_size as f32 / mouse_constants.map_size.x as f32) * mouse_constants.screen_size.x as f32;
+        if within_range(screen_pos.as_vec2(), mouse_constants.mouse_position, brush_size) {
             let mut pixel = get_pixel(trail_buffer, mouse_constants.map_size, map_pos);
             match mouse_constants.click_mode.decode() {
                 ClickMode::Disabled => {}

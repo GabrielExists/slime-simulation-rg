@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::ops::Deref;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -42,6 +43,7 @@ pub struct ProgramInit<'window> {
     pub handles: Handles<'window>,
     pub trail_stats_buffer: wgpu::Buffer,
 }
+
 impl<'window> Deref for ProgramInit<'window> {
     type Target = Handles<'window>;
 
@@ -87,9 +89,10 @@ impl Program<'_> {
             agent_stats: create_agent_stats_all(),
             trail_stats: TRAIL_STATS,
             scale_factor: 1.0,
-            show_menu: true,
+            show_menu: false,
             respawn: false,
             reset_trails: false,
+            quit: false,
             playing: true,
         };
 
@@ -162,26 +165,31 @@ impl Program<'_> {
         self.slot_egui.recreate_buffers(&self.program_init, &self.program_buffers);
     }
 
-    pub(crate) fn on_loop(&mut self, output: &mut SurfaceTexture, start: &Instant, last_time: &mut Instant) {
+    // Returns false on exit
+    pub(crate) fn on_loop(&mut self, output: &mut SurfaceTexture, start: &Instant, last_time: &mut Instant) -> bool {
+        if self.configuration.quit {
+            return false;
+        }
         let time = start.elapsed().as_secs_f32();
         let mut delta_time = last_time.elapsed().as_secs_f32();
-        if self.first_frame {
-            delta_time = 0.0;
-            self.first_frame = false;
-        } else {
-            let fixed_delta_time = self.configuration.globals.fixed_delta_time * rand::rng().random_range(0.9..1.1);
-            if delta_time < fixed_delta_time {
-                thread::sleep(Duration::from_secs_f32(fixed_delta_time - delta_time));
+        let mut time_step = self.configuration.globals.time_step * rand::rng().random_range(0.95..1.05);
+        let min_delta_time = 1.0 / self.configuration.globals.max_frame_rate;
+        if delta_time < min_delta_time {
+            if self.configuration.globals.smoothen_after_max_frame_rate {
+                time_step = (time_step / min_delta_time) * delta_time;
+            } else {
+                if !self.configuration.playing {
+                    thread::sleep(Duration::from_secs_f32(min_delta_time - delta_time));
+                }
             }
-            delta_time = fixed_delta_time;
         }
-        *last_time = std::time::Instant::now();
+        *last_time = Instant::now();
         let screen_size = self.program_init.window.inner_size();
         let push_constants = ShaderConstants {
             screen_size: uvec2(screen_size.width, screen_size.height),
             map_size: self.program_buffers.map_size,
             time,
-            delta_time: delta_time * self.configuration.globals.time_scale,
+            time_step,
             padding_1: 0.0,
             padding_2: 0.0,
             background_color: self.configuration.globals.background_color,
@@ -207,11 +215,17 @@ impl Program<'_> {
             for _ in 0..self.configuration.globals.compute_steps_per_render {
                 self.slot_agents.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
                 self.slot_diffuse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
+                // Render just one step the first frame, to show the spawn positions
+                if self.first_frame {
+                    self.first_frame = false;
+                    break;
+                }
             }
         }
         self.slot_mouse.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
         self.slot_render.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
         self.slot_egui.on_loop(&self.program_init, &self.program_buffers, &frame, &mut self.configuration);
+        true
     }
 
     pub(crate) fn handle_input(&mut self, event: &WindowEvent) {

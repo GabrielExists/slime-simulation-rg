@@ -19,13 +19,15 @@ pub struct ConfigurationValues {
     pub show_menu: bool,
     pub respawn: bool,
     pub reset_trails: bool,
+    pub quit: bool,
     pub playing: bool,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Globals {
-    pub fixed_delta_time: f32,
-    pub time_scale: f32,
+    pub time_step: f32,
+    pub max_frame_rate: f32,
+    pub smoothen_after_max_frame_rate: bool,
     pub compute_steps_per_render: u32,
     pub click_mode: ClickMode,
     pub brush_size: f32,
@@ -44,11 +46,12 @@ const TIME_SCALE: f32 = 2.0;
 // const TIME_SCALE: f32 = 0.15;
 
 pub const GLOBALS: Globals = Globals {
-    fixed_delta_time: FIXED_DELTA_TIME,
-    time_scale: TIME_SCALE,
-    compute_steps_per_render: 1,
+    time_step: 1.0/60.0,
+    max_frame_rate: 4.0,
+    smoothen_after_max_frame_rate: true,
+    compute_steps_per_render: 12,
     click_mode: ClickMode::PaintTrail(0),
-    brush_size: 15.0,
+    brush_size: 8.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
     map_width: if RESIZE_MAP_WITH_WINDOW { DEFAULT_WIDTH } else { DEFAULT_MAP_WIDTH },
     map_height: if RESIZE_MAP_WITH_WINDOW { DEFAULT_HEIGHT } else { DEFAULT_MAP_HEIGHT },
