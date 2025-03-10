@@ -71,14 +71,14 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 20000,
+            num_agents: 80000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 17.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
@@ -215,14 +215,14 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Green".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE - 10 },
-            num_agents: 20000,
+            num_agents: 80000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 14.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
