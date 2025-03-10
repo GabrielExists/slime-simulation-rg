@@ -1,9 +1,12 @@
 use serde::{Deserialize, Serialize};
 use shared::*;
 
-pub const DEFAULT_WIDTH: u32 = 800;
-pub const DEFAULT_HEIGHT: u32 = 480;
+pub const DEFAULT_WIDTH: u32 = 1280;
+pub const DEFAULT_HEIGHT: u32 = 720;
 pub const DEFAULT_DISTANCE: u32 = 170;
+pub const DEFAULT_MAP_WIDTH: u32 = 1280;
+pub const DEFAULT_MAP_HEIGHT: u32 = 720;
+pub const RESIZE_MAP_WITH_WINDOW: bool = false;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConfigurationValues {
@@ -27,6 +30,8 @@ pub struct Globals {
     pub click_mode: ClickMode,
     pub brush_size: f32,
     pub background_color: Color,
+    pub map_width: u32,
+    pub map_height: u32,
 }
 
 #[cfg(not(target_arch = "aarch64"))]
@@ -45,6 +50,8 @@ pub const GLOBALS: Globals = Globals {
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 7.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
+    map_width: if RESIZE_MAP_WITH_WINDOW { DEFAULT_WIDTH } else { DEFAULT_MAP_WIDTH },
+    map_height: if RESIZE_MAP_WITH_WINDOW { DEFAULT_HEIGHT } else { DEFAULT_MAP_HEIGHT },
 };
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
@@ -256,8 +263,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 ],
             },
         },
-
-
         AgentStatsAll {
             name: "RedToGreen".to_string(),
             spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },

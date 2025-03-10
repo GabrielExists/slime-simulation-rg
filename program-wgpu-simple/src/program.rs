@@ -2,12 +2,12 @@ use std::ops::Deref;
 use std::thread;
 use std::time::{Duration, Instant};
 use crate::configuration::create_agent_stats_all;
-use glam::uvec2;
+use glam::{uvec2, UVec2};
+use crate::configuration::RESIZE_MAP_WITH_WINDOW;
 use crate::configuration::ConfigurationValues;
 use rand::Rng;
 use crate::configuration::{GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
-use winit::dpi::PhysicalSize;
 use winit::event::{WindowEvent};
 use wgpu::util::DeviceExt;
 use shared::{ShaderConstants, INTS_PER_PIXEL};
@@ -50,9 +50,9 @@ impl<'window> Deref for ProgramInit<'window> {
     }
 }
 
-// Data regenerated when window is resized
+// Data regenerated buffer size is changed
 pub struct ProgramBuffers {
-    pub screen_size: PhysicalSize<u32>,
+    pub map_size: UVec2,
 
     pub num_bytes_screen_buffers: usize,
     pub trail_buffer: wgpu::Buffer,
@@ -106,7 +106,7 @@ impl Program<'_> {
             trail_stats_buffer,
         };
 
-        let program_buffers = Self::create_buffers(&program_init);
+        let program_buffers = Self::create_buffers(&program_init, &configuration);
         let slot_agents = SlotAgents::create(&program_init, &program_buffers, &configuration);
         let slot_diffuse = SlotDiffuse::create(&program_init, &program_buffers, &configuration);
         let slot_mouse = SlotMouse::create(&program_init, &program_buffers, &configuration);
@@ -126,9 +126,14 @@ impl Program<'_> {
     }
 
     // We create buffers that are shared across shaders here
-    pub fn create_buffers(program_init: &ProgramInit<'_>) -> ProgramBuffers {
-        let size = program_init.window.inner_size();
-        println!("Width and height {}, {}", size.width, size.height);
+    pub fn create_buffers(program_init: &ProgramInit<'_>, configuration: &ConfigurationValues) -> ProgramBuffers {
+        let size = if RESIZE_MAP_WITH_WINDOW {
+            let size = program_init.window.inner_size();
+            uvec2(size.width, size.height)
+        } else {
+            uvec2(configuration.globals.map_width, configuration.globals.map_height)
+        };
+        println!("Map width and height {}, {}", size.x, size.y);
         let empty_bytes = Self::bytes_from_trail_map_size(size);
         let num_bytes = empty_bytes.len();
 
@@ -141,7 +146,7 @@ impl Program<'_> {
         });
 
         let buffers = ProgramBuffers {
-            screen_size: size,
+            map_size: size,
             num_bytes_screen_buffers: num_bytes,
             trail_buffer,
         };
@@ -149,7 +154,7 @@ impl Program<'_> {
     }
 
     pub(crate) fn recreate_buffers(&mut self) {
-        self.program_buffers = Self::create_buffers(&self.program_init);
+        self.program_buffers = Self::create_buffers(&self.program_init, &self.configuration);
         self.slot_agents.recreate_buffers(&self.program_init, &self.program_buffers);
         self.slot_diffuse.recreate_buffers(&self.program_init, &self.program_buffers);
         self.slot_mouse.recreate_buffers(&self.program_init, &self.program_buffers);
@@ -158,7 +163,6 @@ impl Program<'_> {
     }
 
     pub(crate) fn on_loop(&mut self, output: &mut SurfaceTexture, start: &Instant, last_time: &mut Instant) {
-
         let time = start.elapsed().as_secs_f32();
         let mut delta_time = last_time.elapsed().as_secs_f32();
         if self.first_frame {
@@ -172,18 +176,19 @@ impl Program<'_> {
             delta_time = fixed_delta_time;
         }
         *last_time = std::time::Instant::now();
+        let screen_size = self.program_init.window.inner_size();
         let push_constants = ShaderConstants {
-            screen_size: uvec2(
-                self.program_buffers.screen_size.width,
-                self.program_buffers.screen_size.height,
-            ),
+            screen_size: uvec2(screen_size.width, screen_size.height),
+            map_size: self.program_buffers.map_size,
             time,
             delta_time: delta_time * self.configuration.globals.time_scale,
+            padding_1: 0.0,
+            padding_2: 0.0,
             background_color: self.configuration.globals.background_color,
         };
         if self.configuration.reset_trails {
             self.configuration.reset_trails = false;
-            let bytes = Self::bytes_from_trail_map_size(self.program_buffers.screen_size);
+            let bytes = Self::bytes_from_trail_map_size(self.program_buffers.map_size);
             self.program_init.queue.write_buffer(&self.program_buffers.trail_buffer, 0, &bytes);
             self.program_init.queue.submit([]);
             self.first_frame = true;
@@ -216,9 +221,9 @@ impl Program<'_> {
         }
     }
 
-    pub fn bytes_from_trail_map_size(size: PhysicalSize<u32>) -> Vec<u8> {
+    pub fn bytes_from_trail_map_size(size: UVec2) -> Vec<u8> {
         let alignment = wgpu::COPY_BUFFER_ALIGNMENT as u32;
-        let num_pixels = ((size.width * size.height).div_ceil(alignment) * alignment) as usize;
+        let num_pixels = ((size.x * size.y).div_ceil(alignment) * alignment) as usize;
         let empty_bytes = std::iter::repeat(0 as u32)
             .take(num_pixels * INTS_PER_PIXEL as usize)
             .flat_map(u32::to_ne_bytes)

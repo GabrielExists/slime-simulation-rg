@@ -92,7 +92,7 @@ impl Slot for SlotDiffuse {
     }
 
     fn create_buffers(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, init: &Self::Init) -> Self::Buffers {
-        let empty_bytes = Program::bytes_from_trail_map_size(program_init.window.inner_size());
+        let empty_bytes = Program::bytes_from_trail_map_size(program_buffers.map_size);
         let diffuse_input_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Diffuse intermediate buffer"),
             contents: &empty_bytes,
@@ -142,7 +142,7 @@ impl Slot for SlotDiffuse {
                 0,
                 bytemuck::bytes_of(&program_frame.push_constants),
             );
-            cpass.dispatch_workgroups(program_buffers.screen_size.width.div_ceil(8), program_buffers.screen_size.height.div_ceil(8), 1);
+            cpass.dispatch_workgroups(program_buffers.map_size.x.div_ceil(8), program_buffers.map_size.y.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
     }

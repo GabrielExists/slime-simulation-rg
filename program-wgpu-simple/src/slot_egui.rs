@@ -62,7 +62,7 @@ impl Slot for SlotEgui {
     }
     fn recreate_buffers(&mut self, _program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) {}
 
-    fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
+    fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
         let mut ctx = futures::task::Context::from_waker(Waker::noop());
         if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
             let pinned = std::pin::pin!(picker_handle);
@@ -98,9 +98,10 @@ impl Slot for SlotEgui {
         }
 
         configuration.shader_config_changed = false;
-        let window = &program_init.window;
+        let window = program_init.window;
+        let window_size = window.inner_size();
         let screen_descriptor = egui_wgpu::ScreenDescriptor {
-            size_in_pixels: [program_buffers.screen_size.width, program_buffers.screen_size.height],
+            size_in_pixels: [window_size.width, window_size.height],
             pixels_per_point: window.scale_factor() as f32
                 * configuration.scale_factor,
         };
@@ -116,7 +117,7 @@ impl Slot for SlotEgui {
         self.state.egui_ctx().begin_pass(raw_input);
 
         let previous_configuration = configuration.clone();
-        configuration_menu::render_configuration_menu(&self.state, program_buffers.screen_size, configuration, &mut self.local_state);
+        configuration_menu::render_configuration_menu(&self.state, window_size, configuration, &mut self.local_state);
         if configuration.globals != previous_configuration.globals ||
             configuration.agent_stats != previous_configuration.agent_stats ||
             configuration.trail_stats != previous_configuration.trail_stats {

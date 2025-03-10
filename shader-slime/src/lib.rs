@@ -40,13 +40,13 @@ pub fn main_cs(
     }
     let agent_stats = &agent_stats_buffer[agent.agent_type as usize];
 
-    let screen_size = constants.screen_size;
-    let random = hash((agent.y * screen_size.x as f32 + agent.x) as u32 + hash(id.x));
+    let map_size = constants.map_size;
+    let random = hash((agent.y * map_size.x as f32 + agent.x) as u32 + hash(id.x));
 
     // Sensor based on sensory data
-    let weight_forward = sense(trail_buffer, screen_size, agent, &agent_stats, 0.0);
-    let weight_left = sense(trail_buffer, screen_size, agent, &agent_stats, agent_stats.sensor_angle_spacing * PI / 180.0);
-    let weight_right = sense(trail_buffer, screen_size, agent, &agent_stats, -agent_stats.sensor_angle_spacing * PI / 180.0);
+    let weight_forward = sense(trail_buffer, map_size, agent, &agent_stats, 0.0);
+    let weight_left = sense(trail_buffer, map_size, agent, &agent_stats, agent_stats.sensor_angle_spacing * PI / 180.0);
+    let weight_right = sense(trail_buffer, map_size, agent, &agent_stats, -agent_stats.sensor_angle_spacing * PI / 180.0);
 
     let random_steer_strength = random as f32 / u32::MAX as f32;
     let turn_speed = agent_stats.turn_speed * PI;
@@ -90,7 +90,7 @@ pub fn main_cs(
     let bounds: Bounds = 'clamp_block: loop {
         while num_steps > step_size {
             step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * step_size;
-            let bounds = process_pixel(trail_buffer, screen_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
+            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -102,18 +102,18 @@ pub fn main_cs(
         let previous = step_pos;
         step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * num_steps;
         if previous.as_ivec2() != step_pos.as_ivec2() {
-            let bounds = process_pixel(trail_buffer, screen_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
+            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
             break 'clamp_block bounds;
         }
-        break 'clamp_block if is_inside_bounds(step_pos.as_ivec2(), constants.screen_size) {
+        break 'clamp_block if is_inside_bounds(step_pos.as_ivec2(), constants.map_size) {
             Bounds::InsideBounds
         } else {
             Bounds::OutsideBounds
         };
     };
     if let Bounds::OutsideBounds = bounds {
-        step_pos.x = f32::min(constants.screen_size.x as f32 - 1.01, f32::max(0.0, step_pos.x));
-        step_pos.y = f32::min(constants.screen_size.y as f32 - 1.01, f32::max(0.0, step_pos.y));
+        step_pos.x = f32::min(constants.map_size.x as f32 - 1.01, f32::max(0.0, step_pos.x));
+        step_pos.y = f32::min(constants.map_size.y as f32 - 1.01, f32::max(0.0, step_pos.y));
         agent.angle = (random as f32 / u32::MAX as f32) * 2.0 * PI;
     }
 
@@ -129,7 +129,7 @@ pub fn main_cs(
     }
 }
 
-fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
+fn sense(trail_buffer: &mut [u32], map_size: UVec2, agent: &Agent, agent_stats: &AgentStats, angle_offset: f32) -> Option<f32> {
     let sensor_angle = agent.angle + angle_offset;
     let sensor_center = ivec2(
         (agent.x + sensor_angle.cos() * agent_stats.sensor_offset) as i32,
@@ -141,8 +141,8 @@ fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stat
         for offset_y in -1..=1 {
             let pos = sensor_center + ivec2(offset_x, offset_y);
 
-            if is_inside_bounds(pos, screen_size) {
-                let pixel = get_pixel(trail_buffer, screen_size, pos.as_uvec2());
+            if is_inside_bounds(pos, map_size) {
+                let pixel = get_pixel(trail_buffer, map_size, pos.as_uvec2());
                 for i in 0..NUM_TRAIL_STATS {
                     let channel_stats = &agent_stats.interaction_channels[i];
                     sum += pixel.get_frac(i) * channel_stats.attraction;
@@ -158,9 +158,9 @@ fn sense(trail_buffer: &mut [u32], screen_size: UVec2, agent: &Agent, agent_stat
 }
 
 
-fn process_pixel(trail_buffer: &mut [u32], screen_size: UVec2, agent_stats: &AgentStats, agent_stats_list: &[AgentStats], agent: &mut Agent, position: IVec2) -> Bounds {
-    if is_inside_bounds(position, screen_size) {
-        let mut pixel = get_pixel(trail_buffer, screen_size, position.as_uvec2());
+fn process_pixel(trail_buffer: &mut [u32], map_size: UVec2, agent_stats: &AgentStats, agent_stats_list: &[AgentStats], agent: &mut Agent, position: IVec2) -> Bounds {
+    if is_inside_bounds(position, map_size) {
+        let mut pixel = get_pixel(trail_buffer, map_size, position.as_uvec2());
         for trail_index in 0..NUM_TRAIL_STATS {
             let interaction = agent_stats.interaction_channels[trail_index];
             let mut value_frac = pixel.get_frac(trail_index as usize) as f32;
@@ -179,9 +179,9 @@ fn process_pixel(trail_buffer: &mut [u32], screen_size: UVec2, agent_stats: &Age
 
 /// rust-gpu does not support returning a reference in an option it seems.
 /// As a workaround, it is the callers responsibility to make sure position is within bounds
-pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], screen_size: UVec2, position: UVec2) -> PixelView<'pixel> {
+pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], map_size: UVec2, position: UVec2) -> PixelView<'pixel> {
     // if is_inside_bounds(position, constants) {
-    let pixel_index = (position.y as usize * screen_size.x as usize + position.x as usize) * 2;
+    let pixel_index = (position.y as usize * map_size.x as usize + position.x as usize) * 2;
     // Some(
     // Safety: Safe since we're mutably borrowing different indices, which means there's not aliasing of mutable references
     unsafe {
@@ -194,12 +194,12 @@ pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], screen_size: UVec2, po
     // }
 }
 
-fn is_inside_bounds(position: IVec2, screen_size: UVec2) -> bool {
-    position.x >= 0 && position.x < screen_size.x as i32 && position.y >= 0 && position.y < screen_size.y as i32
+fn is_inside_bounds(position: IVec2, map_size: UVec2) -> bool {
+    position.x >= 0 && position.x < map_size.x as i32 && position.y >= 0 && position.y < map_size.y as i32
 }
 
-fn is_inside_bounds_u(position: UVec2, screen_size: UVec2) -> bool {
-    position.x < screen_size.x as u32 && position.y < screen_size.y as u32
+fn is_inside_bounds_u(position: UVec2, map_size: UVec2) -> bool {
+    position.x < map_size.x as u32 && position.y < map_size.y as u32
 }
 
 
@@ -212,8 +212,8 @@ pub fn diffuse_cs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] output_buffer: &mut [u32],
 ) {
     let pos = uvec2(id.x, id.y);
-    let screen_size = constants.screen_size;
-    if !is_inside_bounds_u(pos, constants.screen_size) {
+    let map_size = constants.map_size;
+    if !is_inside_bounds_u(pos, map_size) {
         return;
     }
     for channel_index in 0..NUM_TRAIL_STATS {
@@ -224,14 +224,14 @@ pub fn diffuse_cs(
         for offset_x in -1..=1 {
             for offset_y in -1..=1 {
                 let sample_pos = pos.as_ivec2() + ivec2(offset_x, offset_y);
-                if is_inside_bounds(sample_pos, screen_size) {
-                    let pixel = get_pixel(trail_buffer, screen_size, sample_pos.as_uvec2());
+                if is_inside_bounds(sample_pos, map_size) {
+                    let pixel = get_pixel(trail_buffer, map_size, sample_pos.as_uvec2());
                     sum += pixel.get_frac(channel_index);
                 }
             }
         }
 
-        let pixel = get_pixel(trail_buffer, screen_size, pos);
+        let pixel = get_pixel(trail_buffer, map_size, pos);
         let previous_value = pixel.get_frac(channel_index);
         let blur_result = sum / 9.0;
         let diffused_value = lerp(
@@ -242,7 +242,7 @@ pub fn diffuse_cs(
 
         let evaporation_this_tick = (evaporation_speed / 100.0) * constants.delta_time;
         let new_value = f32::max(0.0, diffused_value - evaporation_this_tick);
-        let mut output_pixel = get_pixel(output_buffer, screen_size, pos);
+        let mut output_pixel = get_pixel(output_buffer, map_size, pos);
         output_pixel.set_frac(channel_index, new_value);
     }
 }
@@ -254,13 +254,15 @@ pub fn mouse_cs(
     #[spirv(push_constant)] mouse_constants: &MouseConstants,
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] trail_buffer: &mut [u32],
 ) {
-    let pos = uvec2(id.x, id.y);
-    if !is_inside_bounds_u(pos, mouse_constants.screen_size) {
+    let map_pos = uvec2(id.x, id.y);
+    if !is_inside_bounds_u(map_pos, mouse_constants.map_size) {
         return;
     }
+    let screen_pos = screen_from_map_pos(map_pos, mouse_constants.map_size, mouse_constants.screen_size);
+
     if mouse_constants.mouse_down != 0 {
-        if within_range(pos.as_vec2(), mouse_constants.mouse_position, mouse_constants.brush_size as f32) {
-            let mut pixel = get_pixel(trail_buffer, mouse_constants.screen_size, pos);
+        if within_range(screen_pos.as_vec2(), mouse_constants.mouse_position, mouse_constants.brush_size as f32) {
+            let mut pixel = get_pixel(trail_buffer, mouse_constants.map_size, map_pos);
             match mouse_constants.click_mode.decode() {
                 ClickMode::Disabled => {}
                 ClickMode::ShowMenu => {}
@@ -284,6 +286,13 @@ pub fn mouse_cs(
     }
 }
 
+fn screen_from_map_pos(map_pos: UVec2, map_size: UVec2, screen_size: UVec2) -> UVec2 {
+    ((map_pos.as_vec2() / map_size.as_vec2()) * screen_size.as_vec2()).as_uvec2()
+}
+fn map_from_screen_pos(screen_pos: IVec2, screen_size: UVec2, map_size: UVec2) -> IVec2 {
+    ((screen_pos.as_vec2() / screen_size.as_vec2()) * map_size.as_vec2()).as_ivec2()
+}
+
 fn within_range(first: Vec2, second: Vec2, distance: f32) -> bool {
     let square_distance = (first.x - second.x).pow(2) + (first.y - second.y).pow(2);
     square_distance < distance.pow(2)
@@ -298,9 +307,11 @@ pub fn main_fs(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] trail_buffer: &mut [u32],
     output: &mut Vec4,
 ) {
-    let position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
-    if is_inside_bounds(position, constants.screen_size) {
-        let pixel = get_pixel(trail_buffer, constants.screen_size, position.as_uvec2());
+    let screen_position = ivec2(in_frag_coord.x as i32, in_frag_coord.y as i32);
+    let map_position = map_from_screen_pos(screen_position, constants.screen_size, constants.map_size);
+    if is_inside_bounds(map_position, constants.map_size) {
+        let map_position = map_position.as_uvec2();
+        let pixel = get_pixel(trail_buffer, constants.map_size, map_position);
         let mut color = constants.background_color.inner;
         for i in 0..NUM_TRAIL_STATS {
             match trail_stats[i].color_mode.decode() {

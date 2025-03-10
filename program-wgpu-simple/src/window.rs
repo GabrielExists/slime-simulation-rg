@@ -1,4 +1,9 @@
-use crate::program::Handles;
+use crate::{
+    configuration::RESIZE_MAP_WITH_WINDOW,
+    program::Handles,
+    program::Program,
+    configuration::{DEFAULT_HEIGHT, DEFAULT_WIDTH}
+};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -6,8 +11,6 @@ use winit::{
 };
 #[cfg(target_arch = "aarch64")]
 use winit::window::Fullscreen;
-use crate::program::Program;
-use crate::configuration::{DEFAULT_HEIGHT, DEFAULT_WIDTH};
 
 fn _print_type_name<T>(_: T) {
     println!("{}", std::any::type_name::<T>());
@@ -220,7 +223,9 @@ async fn run_inner(
                         surface_config.width = size.width;
                         surface_config.height = size.height;
                         surface.configure(&device, surface_config);
-                        program.recreate_buffers();
+                        if RESIZE_MAP_WITH_WINDOW {
+                            program.recreate_buffers();
+                        }
                         last_time = std::time::Instant::now();
                     }
                 }

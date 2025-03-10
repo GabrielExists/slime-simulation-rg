@@ -103,8 +103,10 @@ impl Slot for SlotMouse {
     }
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, _program_frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
+        let screen_size = program_init.window.inner_size();
         let mouse_constants = MouseConstants {
-            screen_size: uvec2(program_buffers.screen_size.width, program_buffers.screen_size.height),
+            screen_size: uvec2(screen_size.width, screen_size.height),
+            map_size: uvec2(program_buffers.map_size.x, program_buffers.map_size.y),
             click_mode: configuration.globals.click_mode.encode(),
             mouse_down: self.mouse_click.is_some() as u32,
             mouse_position: self.mouse_position,
@@ -124,7 +126,7 @@ impl Slot for SlotMouse {
                 0,
                 bytemuck::bytes_of(&mouse_constants),
             );
-            cpass.dispatch_workgroups(program_buffers.screen_size.width.div_ceil(8), program_buffers.screen_size.height.div_ceil(8), 1);
+            cpass.dispatch_workgroups(program_buffers.map_size.x.div_ceil(8), program_buffers.map_size.y.div_ceil(8), 1);
         }
         program_init.queue.submit([compute_encoder.finish()]);
     }

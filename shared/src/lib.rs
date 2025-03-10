@@ -225,8 +225,11 @@ impl ColorModeEncoded {
 #[repr(C)]
 pub struct ShaderConstants {
     pub screen_size: UVec2,
+    pub map_size: UVec2,
     pub time: f32,
     pub delta_time: f32,
+    pub padding_1: f32,
+    pub padding_2: f32,
     pub background_color: Color,
 }
 
@@ -234,6 +237,7 @@ pub struct ShaderConstants {
 #[repr(C)]
 pub struct MouseConstants {
     pub screen_size: UVec2,
+    pub map_size: UVec2,
     pub click_mode: ClickModeEncoded,
     pub mouse_down: u32,
     pub mouse_position: Vec2,

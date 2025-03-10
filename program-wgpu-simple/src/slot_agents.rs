@@ -1,5 +1,5 @@
+use glam::UVec2;
 use crate::configuration::AgentStatsAll;
-use winit::dpi::PhysicalSize;
 use crate::configuration::ConfigurationValues;
 use rand::Rng;
 use shared::{ShaderConstants, SpawnBox, SpawnMode};
@@ -31,7 +31,7 @@ impl Slot for SlotAgents {
 
     fn create(program_init: &ProgramInit<'_>, program_buffers: &ProgramBuffers, configuration: &ConfigurationValues) -> Self {
         let mut num_agents = 0;
-        let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
+        let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.map_size, &mut num_agents);
 
         let agent_stats_bytes = Self::bytes_from_agent_stats(configuration);
         let agent_stats_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -156,7 +156,7 @@ impl Slot for SlotAgents {
         if configuration.respawn {
             configuration.respawn = false;
             let mut num_agents = 0;
-            let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.screen_size, &mut num_agents);
+            let agent_bytes = Self::bytes_from_agents(configuration, program_buffers.map_size, &mut num_agents);
             let agent_buffer = program_init.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Agent buffer recreated"),
                 contents: &agent_bytes,
@@ -196,7 +196,7 @@ impl SlotAgents {
         agent_stats_bytes
     }
 
-    fn bytes_from_agents(configuration: &ConfigurationValues, size: PhysicalSize<u32>, num_agents: &mut usize) -> Vec<u8> {
+    fn bytes_from_agents(configuration: &ConfigurationValues, size: UVec2, num_agents: &mut usize) -> Vec<u8> {
         let agent_bytes = configuration.agent_stats
             .iter()
             .enumerate()
@@ -213,9 +213,9 @@ impl SlotAgents {
     }
 }
 
-fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, agent_type: u32, agent_stats: &AgentStatsAll) -> shared::Agent {
-    let center_x = size.width as f32 / 2.0;
-    let center_y = size.height as f32 / 2.0;
+fn spawn_agent(size: UVec2, spawn_mode: &SpawnMode, agent_type: u32, agent_stats: &AgentStatsAll) -> shared::Agent {
+    let center_x = size.x as f32 / 2.0;
+    let center_y = size.y as f32 / 2.0;
     let create_agent = |x, y, angle| {
         shared::Agent {
             x,
@@ -228,8 +228,8 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, agent_type: u32,
     match spawn_mode {
         SpawnMode::CenterFacingOutward => {
             create_agent(
-                size.width as f32 / 2.0,
-                size.height as f32 / 2.0,
+                size.x as f32 / 2.0,
+                size.y as f32 / 2.0,
                 get_random_angle(),
             )
         }
@@ -253,8 +253,8 @@ fn spawn_agent(size: PhysicalSize<u32>, spawn_mode: &SpawnMode, agent_type: u32,
         }
         SpawnMode::EvenlyDistributed => {
             create_agent(
-                rand::rng().random_range(0..size.width * 10) as f32 / 10.0,
-                rand::rng().random_range(0..size.height * 10) as f32 / 10.0,
+                rand::rng().random_range(0..size.x * 10) as f32 / 10.0,
+                rand::rng().random_range(0..size.y * 10) as f32 / 10.0,
                 get_random_angle(),
             )
         }
