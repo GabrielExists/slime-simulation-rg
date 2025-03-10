@@ -18,9 +18,9 @@ pub struct SlotEgui {
 }
 
 pub struct LocalState {
-    // pub file_picker: Option<(String, Box<dyn std::future::Future<Output=Option<rfd::FileHandle>>>)>,
+    #[cfg(feature = "save-preset")]
     pub file_picker_handle: Option<(String, Box<dyn Future<Output=Option<rfd::FileHandle>> + Unpin>)>,
-    // pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
+    #[cfg(feature = "save-preset")]
     pub file_write_handle: Option<Pin<Box<dyn Future<Output=std::io::Result<()>>>>>,
 }
 
@@ -51,7 +51,9 @@ impl Slot for SlotEgui {
             state: egui_state,
             renderer: egui_renderer,
             local_state: LocalState {
+                #[cfg(feature = "save-preset")]
                 file_picker_handle: None,
+                #[cfg(feature = "save-preset")]
                 file_write_handle: None,
             },
         }
@@ -63,37 +65,40 @@ impl Slot for SlotEgui {
     fn recreate_buffers(&mut self, _program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers) {}
 
     fn on_loop(&mut self, program_init: &ProgramInit<'_>, _program_buffers: &ProgramBuffers, frame: &Frame<'_>, configuration: &mut ConfigurationValues) {
-        let mut ctx = futures::task::Context::from_waker(Waker::noop());
-        if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
-            let pinned = std::pin::pin!(picker_handle);
-            match pinned.poll(&mut ctx) {
-                Poll::Ready(file_handle) => {
-                    if let Some(file_handle) = file_handle {
-                        let file_contents = file_contents.clone();
-                        self.local_state.file_write_handle = Some(Box::pin(
-                            async {
-                                let file_handle = file_handle;
-                                let bytes = file_contents.into_bytes();
-                                file_handle.write(&bytes).await
-                            }
-                        ))
+        #[cfg(feature = "save-preset")]
+        {
+            let mut ctx = futures::task::Context::from_waker(Waker::noop());
+            if let Some((file_contents, picker_handle)) = &mut self.local_state.file_picker_handle {
+                let pinned = std::pin::pin!(picker_handle);
+                match pinned.poll(&mut ctx) {
+                    Poll::Ready(file_handle) => {
+                        if let Some(file_handle) = file_handle {
+                            let file_contents = file_contents.clone();
+                            self.local_state.file_write_handle = Some(Box::pin(
+                                async {
+                                    let file_handle = file_handle;
+                                    let bytes = file_contents.into_bytes();
+                                    file_handle.write(&bytes).await
+                                }
+                            ))
+                        }
+                        self.local_state.file_picker_handle.take();
                     }
-                    self.local_state.file_picker_handle.take();
+                    Poll::Pending => {}
                 }
-                Poll::Pending => {}
             }
-        }
 
-        if let Some(write_handle) = &mut self.local_state.file_write_handle {
-            let pinned = std::pin::pin!(write_handle);
-            match pinned.poll(&mut ctx) {
-                Poll::Ready(file_handle) => {
-                    if let Err(error) = file_handle {
-                        println!("Failed to save configuration to file: {}", error);
+            if let Some(write_handle) = &mut self.local_state.file_write_handle {
+                let pinned = std::pin::pin!(write_handle);
+                match pinned.poll(&mut ctx) {
+                    Poll::Ready(file_handle) => {
+                        if let Err(error) = file_handle {
+                            println!("Failed to save configuration to file: {}", error);
+                        }
+                        self.local_state.file_write_handle.take();
                     }
-                    self.local_state.file_write_handle.take();
+                    Poll::Pending => {}
                 }
-                Poll::Pending => {}
             }
         }
 

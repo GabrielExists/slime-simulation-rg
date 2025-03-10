@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use shared::*;
 
-pub const DEFAULT_WIDTH: u32 = 1280;
-pub const DEFAULT_HEIGHT: u32 = 720;
+pub const DEFAULT_WIDTH: u32 = 800;
+pub const DEFAULT_HEIGHT: u32 = 480;
+pub const DEFAULT_MAP_WIDTH: u32 = DEFAULT_WIDTH / 4;
+pub const DEFAULT_MAP_HEIGHT: u32 = DEFAULT_HEIGHT / 4;
 pub const DEFAULT_DISTANCE: u32 = 170;
-pub const DEFAULT_MAP_WIDTH: u32 = 1280;
-pub const DEFAULT_MAP_HEIGHT: u32 = 720;
 pub const RESIZE_MAP_WITH_WINDOW: bool = false;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -34,21 +34,21 @@ pub struct Globals {
     pub map_height: u32,
 }
 
-#[cfg(not(target_arch = "aarch64"))]
+// #[cfg(not(target_arch = "aarch64"))]
 const FIXED_DELTA_TIME: f32 = 1.0 / 120.0;
-#[cfg(not(target_arch = "aarch64"))]
+// #[cfg(not(target_arch = "aarch64"))]
 const TIME_SCALE: f32 = 2.0;
-#[cfg(target_arch = "aarch64")]
-const FIXED_DELTA_TIME: f32 = 1.0 / 8.0;
-#[cfg(target_arch = "aarch64")]
-const TIME_SCALE: f32 = 0.15;
+// #[cfg(target_arch = "aarch64")]
+// const FIXED_DELTA_TIME: f32 = 1.0 / 8.0;
+// #[cfg(target_arch = "aarch64")]
+// const TIME_SCALE: f32 = 0.15;
 
 pub const GLOBALS: Globals = Globals {
     fixed_delta_time: FIXED_DELTA_TIME,
     time_scale: TIME_SCALE,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
-    brush_size: 7.0,
+    brush_size: 15.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
     map_width: if RESIZE_MAP_WITH_WINDOW { DEFAULT_WIDTH } else { DEFAULT_MAP_WIDTH },
     map_height: if RESIZE_MAP_WITH_WINDOW { DEFAULT_HEIGHT } else { DEFAULT_MAP_HEIGHT },
@@ -68,7 +68,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 190 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 50 },
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -77,7 +77,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 20000,
+            num_agents: 2000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -130,7 +130,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 3.0,
-                timeout: 8.0,
+                timeout: 4.0,
                 timeout_conversion: 2,
                 interaction_channels: [
                     TrailInteraction {
@@ -155,7 +155,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 1.0,
+                        attraction: 0.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.2,
@@ -184,7 +184,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 25.0,
-                timeout: 50.0,
+                timeout: 15.0,
                 timeout_conversion: 0,
                 interaction_channels: [
                     TrailInteraction {
@@ -220,8 +220,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 180 },
-            num_agents: 20000,
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 40 },
+            num_agents: 2000,
             shader_stats: AgentStats {
                 velocity: 65.0,
                 turn_speed: 80.0,
@@ -274,7 +274,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 3.0,
-                timeout: 8.0,
+                timeout: 4.0,
                 timeout_conversion: 5,
                 interaction_channels: [
                     TrailInteraction {
@@ -299,7 +299,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         conversion: 0,
                     },
                     TrailInteraction {
-                        attraction: 1.0,
+                        attraction: 0.0,
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.2,
@@ -328,7 +328,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 25.0,
-                timeout: 50.0,
+                timeout: 15.0,
                 timeout_conversion: 3,
                 interaction_channels: [
                     TrailInteraction {
@@ -399,6 +399,6 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(0.05, 0.05, 0.05, 1.0),
+        color: Color::new(0.10, 0.10, 0.10, 1.0),
     },
 ];

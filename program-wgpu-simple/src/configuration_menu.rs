@@ -9,7 +9,12 @@ use crate::configuration::DEFAULT_DISTANCE;
 use shared::{ClickMode, ColorMode, NUM_AGENT_TYPES, NUM_TRAIL_STATS, SpawnBox, SpawnMode};
 use crate::slot_egui::LocalState;
 
-pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, configuration: &mut ConfigurationValues, local_state: &mut LocalState) {
+pub fn render_configuration_menu(
+    state: &State,
+    screen_size: PhysicalSize<u32>,
+    configuration: &mut ConfigurationValues,
+    #[allow(unused_variables)] local_state: &mut LocalState,
+) {
     configuration.shader_config_changed = false;
     if configuration.show_menu {
         egui::Window::new("Configuration")
@@ -53,24 +58,24 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                         ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
                             .text("Sensor offset"));
                         ui.collapsing("Trail interactions", |ui| {
-                        for channel_index in 0..NUM_TRAIL_STATS {
-                            ui.separator();
-                            ui.label(format!("Trail {}", TRAIL_NAMES[channel_index]));
-                            let interaction = &mut agent_stats.shader_stats.interaction_channels[channel_index];
-                            ui.add(Slider::new(&mut interaction.attraction, -10.0..=10.0)
-                                .text("Attraction"));
-                            ui.add(Slider::new(&mut interaction.addition, -1.0..=1.0)
-                                .text("Addition"));
-                            let mut conversion_enabled = interaction.conversion_enabled != 0;
-                            ui.checkbox(&mut conversion_enabled, "Conversion enabled");
-                            interaction.conversion_enabled = if conversion_enabled { 1 } else { 0 };
-                            if interaction.conversion_enabled != 0 {
-                                ui.add(Slider::new(&mut interaction.conversion_threshold, 0.0..=1.0)
-                                    .text("Conversion threshold"));
-                                ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
-                                    .text("Conversion new agent type"));
+                            for channel_index in 0..NUM_TRAIL_STATS {
+                                ui.separator();
+                                ui.label(format!("Trail {}", TRAIL_NAMES[channel_index]));
+                                let interaction = &mut agent_stats.shader_stats.interaction_channels[channel_index];
+                                ui.add(Slider::new(&mut interaction.attraction, -10.0..=10.0)
+                                    .text("Attraction"));
+                                ui.add(Slider::new(&mut interaction.addition, -1.0..=1.0)
+                                    .text("Addition"));
+                                let mut conversion_enabled = interaction.conversion_enabled != 0;
+                                ui.checkbox(&mut conversion_enabled, "Conversion enabled");
+                                interaction.conversion_enabled = if conversion_enabled { 1 } else { 0 };
+                                if interaction.conversion_enabled != 0 {
+                                    ui.add(Slider::new(&mut interaction.conversion_threshold, 0.0..=1.0)
+                                        .text("Conversion threshold"));
+                                    ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
+                                        .text("Conversion new agent type"));
+                                }
                             }
-                        }
                         });
                         ui.separator();
                         ui.label("Applies on reset:");
@@ -235,21 +240,24 @@ pub fn render_configuration_menu(state: &State, screen_size: PhysicalSize<u32>, 
                 ui.add(Slider::new(&mut configuration.globals.brush_size, 3.0..=100.0)
                     .logarithmic(true)
                     .text("Brush size"));
-                ui.separator();
-                if ui.button("Save preset").clicked() {
-                    if let Ok(save_file_string) = serde_json::to_string_pretty(&configuration) {
-                        let picker_future = rfd::AsyncFileDialog::new()
-                            .add_filter("text", &["json"])
-                            .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
-                            .save_file();
+                #[cfg(feature = "save-preset")]
+                {
+                    ui.separator();
+                    if ui.button("Save preset").clicked() {
+                        if let Ok(save_file_string) = serde_json::to_string_pretty(&configuration) {
+                            let picker_future = rfd::AsyncFileDialog::new()
+                                .add_filter("text", &["json"])
+                                .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
+                                .save_file();
 
-                        local_state.file_picker_handle = Some((save_file_string, Box::new(picker_future)));
-                        // if let Some(file_path) = rfd::FileDialog::new()
-                        //     .add_filter("text", &["json"])
-                        //     .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
-                        //     .save_file() {
-                        //     // let _ = fs::write(file_path, string);
-                        // }
+                            local_state.file_picker_handle = Some((save_file_string, Box::new(picker_future)));
+                            // if let Some(file_path) = rfd::FileDialog::new()
+                            //     .add_filter("text", &["json"])
+                            //     .set_directory(std::env::current_dir().unwrap_or(PathBuf::from(".")))
+                            //     .save_file() {
+                            //     // let _ = fs::write(file_path, string);
+                            // }
+                        }
                     }
                 }
             });
