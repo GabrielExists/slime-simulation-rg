@@ -78,7 +78,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
-                sensor_offset: 5.0,
+                sensor_offset: 8.0,
                 timeout: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
