@@ -5,7 +5,7 @@ pub const DEFAULT_WIDTH: u32 = 1280;
 pub const DEFAULT_HEIGHT: u32 = 720;
 pub const DEFAULT_MAP_WIDTH: u32 = DEFAULT_WIDTH;
 pub const DEFAULT_MAP_HEIGHT: u32 = DEFAULT_HEIGHT;
-pub const DEFAULT_DISTANCE: u32 = 230;
+pub const DEFAULT_DISTANCE: u32 = 200;
 pub const RESIZE_MAP_WITH_WINDOW: bool = false;
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -38,7 +38,7 @@ pub struct Globals {
 
 pub const GLOBALS: Globals = Globals {
     time_step: 1.0/60.0,
-    max_frame_rate: 60.0,
+    max_frame_rate: 100.0,
     smoothen_after_max_frame_rate: true,
     compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
@@ -62,7 +62,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE - 5 },
+            spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: DEFAULT_DISTANCE - 10 },
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -214,7 +214,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE - 10 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE },
             num_agents: 20000,
             shader_stats: AgentStats {
                 velocity: 65.0,
