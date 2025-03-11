@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-wgpu = { version = "22.1", features = ["spirv", "vulkan-portability"]}
+wgpu = { version = "22.1", features = ["spirv", "vulkan-portability"] }
 winit = { version = "0.30.0", features = ["android-native-activity", "rwh_05"] }
 bytemuck = { workspace = true, features = ["derive"] }
 futures = { version = "0.3", default-features = false, features = ["std", "executor"] }
@@ -15,13 +15,17 @@ rand = "0.9.0"
 
 egui = "0.29.1"
 raw-window-handle = "0.6.2"
-egui-wgpu = { version = "0.29.1",features = ["winit"] }
-egui-winit = "0.29.1"
+egui-wgpu = { version = "0.29.1", features = ["winit"] }
+egui-winit = { version = "0.29.1", default-features = false, features = ["links", "wayland", "x11", ] }
 pollster = "0.3.0"
-glam = {version = "0.29.2", features = ["bytemuck"]}
+glam = { version = "0.29.2", features = ["bytemuck"] }
 serde_json = "1.0.140"
 serde = { version = "1.0.218", features = ["derive"] }
-rfd = { optional = true, version = "0.15.2", default-features=false, features=["gtk3", "async-std"] }
+rfd = { optional = true, version = "0.15.2", default-features = false, features = ["gtk3", "async-std"] }
+
+[target.wasm32-unknown-unknown.dependencies]
+getrandom = { version = "0.3.1", features = ["wasm_js"] }
+#egui-winit = { version = "0.29.1", default-features = false, features = ["clipboard", "links", "wayland", "winit/default", "x11", ] }
 
 [features]
 default = ["save-preset"]

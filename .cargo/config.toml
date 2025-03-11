@@ -12,3 +12,6 @@ rustflags = ["-Zshare-generics=off"]
 linker = "aarch64-linux-gnu-gcc"
 rustflags = ["-Zshare-generics=off"]
 runner = "python bld-deploy-remote.py -t -r --source"
+
+#[target.wasm32-unknown-unknown]
+#rustflags = ['getrandom_backend="linux_getrandom"']
