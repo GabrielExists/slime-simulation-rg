@@ -2,10 +2,10 @@
 #![cfg_attr(target_arch = "spirv", no_std)]
 
 pub mod pixel_view;
-use core::f32::consts::PI;
-use spirv_std::glam;
-use glam::{Vec3, vec3, UVec2, Vec2, Vec4};
 use bytemuck::{Pod, Zeroable};
+use core::f32::consts::PI;
+use glam::{UVec2, Vec2, Vec3, Vec4, vec3};
+use spirv_std::glam;
 
 // Note: This cfg is incorrect on its surface, it really should be "are we compiling with std", but
 // we tie #[no_std] above to the same condition, so it's fine.
@@ -17,17 +17,18 @@ use std::fmt::{Display, Formatter};
 // #[cfg(not(target_arch = "spirv"))]
 // use std::fmt::format;
 #[cfg(not(target_arch = "spirv"))]
-use serde::{Serialize, Deserialize};
+use serde::de::{SeqAccess, Visitor};
 #[cfg(not(target_arch = "spirv"))]
 use serde::ser::SerializeSeq;
 #[cfg(not(target_arch = "spirv"))]
-use serde::{Deserializer, Serializer};
+use serde::{Deserialize, Serialize};
 #[cfg(not(target_arch = "spirv"))]
-use serde::de::{SeqAccess, Visitor};
+use serde::{Deserializer, Serializer};
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Default)]
 pub enum SpawnMode {
+    #[default]
     EvenlyDistributed,
     CenterFacingOutward,
     PointFacingOutward {
@@ -82,10 +83,18 @@ impl Display for SpawnMode {
             SpawnMode::CenterFacingOutward => f.write_str("Center facing outward"),
             SpawnMode::PointFacingOutward { .. } => f.write_str("Point facing outward"),
             SpawnMode::CircleFacingInward { .. } => f.write_str("Circle facing inward"),
-            SpawnMode::CircumferenceFacingInward { .. } => f.write_str("Circumference facing inwards"),
-            SpawnMode::CircumferenceFacingOutward { .. } => f.write_str("Circumference facing outward"),
-            SpawnMode::CircumferenceFacingRandom { .. } => f.write_str("Circumference facing random"),
-            SpawnMode::CircumferenceFacingClockwise { .. } => f.write_str("Circumference facing clockwise"),
+            SpawnMode::CircumferenceFacingInward { .. } => {
+                f.write_str("Circumference facing inwards")
+            }
+            SpawnMode::CircumferenceFacingOutward { .. } => {
+                f.write_str("Circumference facing outward")
+            }
+            SpawnMode::CircumferenceFacingRandom { .. } => {
+                f.write_str("Circumference facing random")
+            }
+            SpawnMode::CircumferenceFacingClockwise { .. } => {
+                f.write_str("Circumference facing clockwise")
+            }
             SpawnMode::BoxFacingRandom { .. } => f.write_str("Box"),
         }
     }
@@ -108,7 +117,7 @@ impl SpawnMode {
     pub fn spawn_box(&self) -> Option<SpawnBox> {
         match self {
             SpawnMode::BoxFacingRandom { spawn_box } => Some(*spawn_box),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -162,7 +171,7 @@ impl ClickModeEncoded {
             2 => ClickMode::ResetAllTrails,
             trail_index @ 256..=511 => ClickMode::PaintTrail(trail_index - 256),
             trail_index @ 512..=767 => ClickMode::ResetTrail(trail_index - 512),
-            _ => ClickMode::Disabled
+            _ => ClickMode::Disabled,
         }
     }
 }
@@ -198,7 +207,7 @@ impl ColorMode {
             ColorMode::Subtract => 1,
             ColorMode::Multiply => 2,
             ColorMode::Divide => 3,
-            _ => 0xFF
+            _ => 0xFF,
         };
         ColorModeEncoded(number)
     }
@@ -216,7 +225,7 @@ impl ColorModeEncoded {
             1 => ColorMode::Subtract,
             2 => ColorMode::Multiply,
             3 => ColorMode::Divide,
-            _ => ColorMode::Disabled
+            _ => ColorMode::Disabled,
         }
     }
 }
@@ -246,10 +255,10 @@ pub struct MouseConstants {
     pub _padding: f32,
 }
 
-pub const NUM_AGENT_TYPES: usize = 6;
+pub const NUM_AGENT_TYPES: usize = 4;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
-#[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
+#[derive(Copy, Clone, PartialEq, Default, Pod, Zeroable)]
 #[repr(C)]
 pub struct AgentStats {
     // Pixels travelled per second
@@ -313,8 +322,11 @@ impl Color {
 }
 #[cfg(not(target_arch = "spirv"))]
 impl Serialize for Color {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut seq  = serializer.serialize_seq(Some(4))?;
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(4))?;
         seq.serialize_element(&self.inner.x)?;
         seq.serialize_element(&self.inner.y)?;
         seq.serialize_element(&self.inner.z)?;
@@ -332,24 +344,32 @@ impl<'de> Visitor<'de> for ColorVisitor {
         formatter.write_str("array of four floats")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
         if let Some(x) = seq.next_element()? {
             if let Some(y) = seq.next_element()? {
                 if let Some(z) = seq.next_element()? {
                     if let Some(w) = seq.next_element()? {
                         return Ok(Color {
-                            inner: Vec4::new(x, y, z, w)
-                        })
+                            inner: Vec4::new(x, y, z, w),
+                        });
                     }
                 }
             }
         }
-        Err(serde::de::Error::custom("missing items when deserializing color"))
+        Err(serde::de::Error::custom(
+            "missing items when deserializing color",
+        ))
     }
 }
 #[cfg(not(target_arch = "spirv"))]
 impl<'de> Deserialize<'de> for Color {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         deserializer.deserialize_seq(ColorVisitor)
     }
 }
@@ -391,7 +411,6 @@ pub fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
     // Evaluate polynomial
     x * x * (3.0 - 2.0 * x)
 }
-
 
 #[cfg(test)]
 mod test {
