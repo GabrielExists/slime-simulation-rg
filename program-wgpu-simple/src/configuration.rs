@@ -62,7 +62,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: DEFAULT_DISTANCE - 10 },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE },
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -80,13 +80,15 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 30.0,
                 timeout: 0.0,
+                timeout_when_clicking: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
                     TrailInteraction {
                         attraction: 0.0,
                         addition: 0.0,
                         conversion_enabled: 1,
-                        conversion_threshold: 0.8,
+                        conversion_threshold: 10.8,
+                        conversion_threshold_when_clicking: 0.8,
                         conversion: 1,
                     },
                     TrailInteraction {
@@ -94,6 +96,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -101,6 +104,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -108,6 +112,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                 ],
@@ -124,7 +129,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 12.0,
-                timeout: 7.0,
+                timeout: 2.0,
+                timeout_when_clicking: 7.0,
                 timeout_conversion: 2,
                 interaction_channels: [
                     TrailInteraction {
@@ -132,6 +138,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -139,6 +146,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -146,6 +154,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -153,6 +162,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.2,
+                        conversion_threshold_when_clicking: 0.2,
                         conversion: 2,
                     },
                 ],
@@ -179,6 +189,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 40.0,
                 timeout: 50.0,
+                timeout_when_clicking: 50.0,
                 timeout_conversion: 0,
                 interaction_channels: [
                     TrailInteraction {
@@ -186,6 +197,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -193,6 +205,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -200,6 +213,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
+                        conversion_threshold_when_clicking: 0.8,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -207,6 +221,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                 ],
@@ -214,7 +229,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: DEFAULT_DISTANCE },
+            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: DEFAULT_DISTANCE - 25 },
             num_agents: 20000,
             shader_stats: AgentStats {
                 velocity: 65.0,
@@ -224,13 +239,15 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 25.0,
                 timeout: 0.0,
+                timeout_when_clicking: 0.0,
                 timeout_conversion: 0,
                 interaction_channels: [
                     TrailInteraction {
                         attraction: 0.2,
                         addition: 0.0,
                         conversion_enabled: 1,
-                        conversion_threshold: 0.8,
+                        conversion_threshold: 10.8,
+                        conversion_threshold_when_clicking: 0.8,
                         conversion: 4,
                     },
                     TrailInteraction {
@@ -238,6 +255,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -245,6 +263,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -252,6 +271,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                 ],
@@ -268,7 +288,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 12.0,
-                timeout: 6.0,
+                timeout: 2.0,
+                timeout_when_clicking: 6.0,
                 timeout_conversion: 5,
                 interaction_channels: [
                     TrailInteraction {
@@ -276,6 +297,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -283,6 +305,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -290,6 +313,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -297,6 +321,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.2,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 5,
                     },
                 ],
@@ -323,6 +348,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 40.0,
                 timeout: 50.0,
+                timeout_when_clicking: 50.0,
                 timeout_conversion: 3,
                 interaction_channels: [
                     TrailInteraction {
@@ -330,6 +356,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                     TrailInteraction {
@@ -337,6 +364,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
+                        conversion_threshold_when_clicking: 0.8,
                         conversion: 3,
                     },
                     TrailInteraction {
@@ -344,6 +372,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 0.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
+                        conversion_threshold_when_clicking: 0.8,
                         conversion: 3,
                     },
                     TrailInteraction {
@@ -351,6 +380,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         addition: 1.0 / 5.0,
                         conversion_enabled: 0,
                         conversion_threshold: 0.0,
+                        conversion_threshold_when_clicking: 0.0,
                         conversion: 0,
                     },
                 ],

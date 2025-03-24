@@ -177,7 +177,7 @@ impl Program<'_> {
             if self.configuration.globals.smoothen_after_max_frame_rate {
                 time_step = (time_step / min_delta_time) * delta_time;
             } else {
-                if !self.configuration.playing {
+                if self.configuration.playing {
                     thread::sleep(Duration::from_secs_f32(min_delta_time - delta_time));
                 }
             }
@@ -190,7 +190,7 @@ impl Program<'_> {
             time,
             time_step,
             padding_1: 0.0,
-            padding_2: 0.0,
+            mouse_down: if self.slot_mouse.mouse_click.is_some() {1} else {0},
             background_color: self.configuration.globals.background_color,
         };
         if self.configuration.reset_trails {
@@ -205,6 +205,11 @@ impl Program<'_> {
             let trail_stats_bytes = Self::bytes_from_trail_stats(&self.configuration);
             self.program_init.queue.write_buffer(&self.program_init.trail_stats_buffer, 0, &trail_stats_bytes);
             self.program_init.queue.submit([]);
+        }
+        if !RESIZE_MAP_WITH_WINDOW && (
+            self.program_buffers.map_size.x != self.configuration.globals.map_width ||
+                self.program_buffers.map_size.y != self.configuration.globals.map_height) {
+            self.recreate_buffers();
         }
         let frame = Frame {
             output,

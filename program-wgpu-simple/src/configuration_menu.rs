@@ -63,6 +63,12 @@ pub fn render_configuration_menu(
                             .text("Sensor angle spacing (degrees)"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
                             .text("Sensor offset"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.timeout, 0.0..=120.0)
+                            .text("Timeout"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.timeout_when_clicking, 0.0..=120.0)
+                            .text("Timeout when clicking"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.timeout_conversion, 0..=NUM_AGENT_TYPES as u32)
+                            .text("Timeout conversion"));
                         ui.collapsing("Trail interactions", |ui| {
                             for channel_index in 0..NUM_TRAIL_STATS {
                                 ui.separator();
@@ -78,6 +84,8 @@ pub fn render_configuration_menu(
                                 if interaction.conversion_enabled != 0 {
                                     ui.add(Slider::new(&mut interaction.conversion_threshold, 0.0..=1.0)
                                         .text("Conversion threshold"));
+                                    ui.add(Slider::new(&mut interaction.conversion_threshold_when_clicking, 0.0..=1.0)
+                                        .text("Conversion threshold when clicking"));
                                     ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
                                         .text("Conversion new agent type"));
                                 }
@@ -194,34 +202,47 @@ pub fn render_configuration_menu(
                         trail_stats.color_mode = color_mode.encode();
                     });
                 }
+                ui.collapsing("Globals", |ui| {
+                    ui.add(Slider::new(&mut configuration.globals.time_step, 0.001..=10.0)
+                        .logarithmic(true)
+                        .text("Time step"));
+                    ui.add(Slider::new(&mut configuration.globals.max_frame_rate, 0.1..=240.0)
+                        .text("Max frame rate"));
+                    ui.checkbox(&mut configuration.globals.smoothen_after_max_frame_rate, "Smoothen beyond max framerate");
+                    ui.add(Slider::new(&mut configuration.globals.compute_steps_per_render, 1..=50)
+                        .text("Compute steps per render"));
+                    ui.add(Slider::new(&mut configuration.globals.map_width, 1..=3840)
+                        .text("Map width"));
+                    ui.add(Slider::new(&mut configuration.globals.map_height, 1..=2160)
+                        .text("Map height"));
+                    ui.horizontal(|ui| {
+                        let mut color = [
+                            configuration.globals.background_color.inner.x,
+                            configuration.globals.background_color.inner.y,
+                            configuration.globals.background_color.inner.z,
+                            configuration.globals.background_color.inner.w,
+                        ];
+                        ui.color_edit_button_rgba_unmultiplied(&mut color);
+                        configuration.globals.background_color.inner.x = color[0];
+                        configuration.globals.background_color.inner.y = color[1];
+                        configuration.globals.background_color.inner.z = color[2];
+                        configuration.globals.background_color.inner.w = color[3];
+                        ui.label("Background color");
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(format!(
+                            "Pixels per point: {}",
+                            state.egui_ctx().pixels_per_point()
+                        ));
+                        if ui.button("-").clicked() {
+                            configuration.scale_factor = (configuration.scale_factor - 0.1).max(0.3);
+                        }
+                        if ui.button("+").clicked() {
+                            configuration.scale_factor = (configuration.scale_factor + 0.1).min(3.0);
+                        }
+                    });
+                });
 
-                ui.separator();
-                ui.horizontal(|ui| {
-                    ui.label(format!(
-                        "Pixels per point: {}",
-                        state.egui_ctx().pixels_per_point()
-                    ));
-                    if ui.button("-").clicked() {
-                        configuration.scale_factor = (configuration.scale_factor - 0.1).max(0.3);
-                    }
-                    if ui.button("+").clicked() {
-                        configuration.scale_factor = (configuration.scale_factor + 0.1).min(3.0);
-                    }
-                });
-                ui.horizontal(|ui| {
-                    let mut color = [
-                        configuration.globals.background_color.inner.x,
-                        configuration.globals.background_color.inner.y,
-                        configuration.globals.background_color.inner.z,
-                        configuration.globals.background_color.inner.w,
-                    ];
-                    ui.color_edit_button_rgba_unmultiplied(&mut color);
-                    configuration.globals.background_color.inner.x = color[0];
-                    configuration.globals.background_color.inner.y = color[1];
-                    configuration.globals.background_color.inner.z = color[2];
-                    configuration.globals.background_color.inner.w = color[3];
-                    ui.label("Background color");
-                });
                 let click_mode = &mut configuration.globals.click_mode;
                 ComboBox::from_label("Click mode")
                     .selected_text(format!("{}", click_mode))

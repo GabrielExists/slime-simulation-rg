@@ -222,7 +222,7 @@ fn spawn_agent(size: UVec2, spawn_mode: &SpawnMode, agent_type: u32, agent_stats
             y,
             angle,
             agent_type,
-            countdown: agent_stats.shader_stats.timeout,
+            countup: agent_stats.shader_stats.timeout,
         }
     };
     match spawn_mode {

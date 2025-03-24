@@ -91,7 +91,7 @@ pub fn main_cs(
     let bounds: Bounds = 'clamp_block: loop {
         while num_steps > step_size {
             step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * step_size;
-            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
+            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, constants, agent, step_pos.as_ivec2());
             if let Bounds::OutsideBounds = bounds {
                 break 'clamp_block bounds;
             }
@@ -103,7 +103,7 @@ pub fn main_cs(
         let previous = step_pos;
         step_pos = step_pos + vec2(agent.angle.cos(), agent.angle.sin()) * num_steps;
         if previous.as_ivec2() != step_pos.as_ivec2() {
-            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, agent_stats_buffer, agent, step_pos.as_ivec2());
+            let bounds = process_pixel(trail_buffer, map_size, &agent_stats, constants, agent, step_pos.as_ivec2());
             break 'clamp_block bounds;
         }
         break 'clamp_block if is_inside_bounds(step_pos.as_ivec2(), constants.map_size) {
@@ -122,10 +122,11 @@ pub fn main_cs(
     agent.y = step_pos.y;
 
     if agent_stats.timeout > 0.01 {
-        agent.countdown -= constants.time_step;
-        if agent.countdown <= 0.0 && agent_stats.timeout_conversion < NUM_AGENT_TYPES as u32 {
+        agent.countup += constants.time_step;
+        let timeout = agent_stats.timeout_when_clicking * constants.mouse_down as f32 + agent_stats.timeout * (1 - constants.mouse_down) as f32;
+        if agent.countup >= timeout && agent_stats.timeout_conversion < NUM_AGENT_TYPES as u32 {
             agent.agent_type = agent_stats.timeout_conversion;
-            agent.countdown = agent_stats_buffer[agent_stats.timeout_conversion as usize].timeout;
+            agent.countup = 0.0;
         }
     }
 }
@@ -159,15 +160,16 @@ fn sense(trail_buffer: &mut [u32], map_size: UVec2, agent: &Agent, agent_stats: 
 }
 
 
-fn process_pixel(trail_buffer: &mut [u32], map_size: UVec2, agent_stats: &AgentStats, agent_stats_list: &[AgentStats], agent: &mut Agent, position: IVec2) -> Bounds {
+fn process_pixel(trail_buffer: &mut [u32], map_size: UVec2, agent_stats: &AgentStats, constants: &ShaderConstants, agent: &mut Agent, position: IVec2) -> Bounds {
     if is_inside_bounds(position, map_size) {
         let mut pixel = get_pixel(trail_buffer, map_size, position.as_uvec2());
         for trail_index in 0..NUM_TRAIL_STATS {
             let interaction = agent_stats.interaction_channels[trail_index];
             let mut value_frac = pixel.get_frac(trail_index as usize) as f32;
-            if interaction.conversion_enabled != 0 && value_frac > interaction.conversion_threshold && interaction.conversion < NUM_AGENT_TYPES as u32 {
+            let conversion_threshold = interaction.conversion_threshold_when_clicking * constants.mouse_down as f32 + interaction.conversion_threshold * (1 - constants.mouse_down) as f32;
+            if interaction.conversion_enabled != 0 && value_frac > conversion_threshold && interaction.conversion < NUM_AGENT_TYPES as u32 {
                 agent.agent_type = interaction.conversion;
-                agent.countdown = agent_stats_list[interaction.conversion as usize].timeout;
+                agent.countup = 0.0;
             }
             value_frac += interaction.addition;
             pixel.set_frac(trail_index, f32::min(value_frac, 1.0));

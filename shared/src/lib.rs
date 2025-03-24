@@ -229,7 +229,7 @@ pub struct ShaderConstants {
     pub time: f32,
     pub time_step: f32,
     pub padding_1: f32,
-    pub padding_2: f32,
+    pub mouse_down: u32,
     pub background_color: Color,
 }
 
@@ -263,6 +263,7 @@ pub struct AgentStats {
     pub sensor_angle_spacing: f32,
     pub sensor_offset: f32,
     pub timeout: f32,
+    pub timeout_when_clicking: f32,
     pub timeout_conversion: u32,
     pub interaction_channels: [TrailInteraction; NUM_TRAIL_STATS],
 }
@@ -275,6 +276,7 @@ pub struct TrailInteraction {
     pub addition: f32,
     pub conversion_enabled: u32,
     pub conversion_threshold: f32,
+    pub conversion_threshold_when_clicking: f32,
     pub conversion: u32,
 }
 
@@ -361,7 +363,7 @@ pub struct Agent {
     pub y: f32,
     pub angle: f32,
     pub agent_type: u32,
-    pub countdown: f32,
+    pub countup: f32,
 }
 
 pub fn saturate(x: f32) -> f32 {
