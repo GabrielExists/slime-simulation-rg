@@ -127,6 +127,14 @@ pub fn render_configuration_menu(
                                 ui.add(Slider::new(y, 0..=height)
                                     .text("Y"));
                             }
+                            SpawnMode::PointFacingClockwise { x, y, distance } => {
+                                ui.add(Slider::new(x, 0..=width)
+                                    .text("X"));
+                                ui.add(Slider::new(y, 0..=height)
+                                    .text("Y"));
+                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                    .text("Distance"));
+                            }
                             SpawnMode::CircleFacingInward { max_distance } => {
                                 ui.add(Slider::new(max_distance, 0..=diagonal_max_radius)
                                     .text("Max distance"));

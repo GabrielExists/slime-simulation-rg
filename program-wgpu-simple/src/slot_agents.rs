@@ -240,6 +240,14 @@ fn spawn_agent(size: UVec2, spawn_mode: &SpawnMode, agent_type: u32, agent_stats
                 get_random_angle(),
             )
         }
+        SpawnMode::PointFacingClockwise { x, y, distance } => {
+            let random_angle = get_random_angle();
+            create_agent(
+                *x as f32 + random_angle.cos() * *distance as f32,
+                *y as f32 + random_angle.sin() * *distance as f32,
+                std::f32::consts::PI / 2.0 + random_angle,
+            )
+        }
         SpawnMode::CircleFacingInward { max_distance } => {
             let max_number = 100000;
             let random_angle = get_random_angle();

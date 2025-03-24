@@ -35,6 +35,11 @@ pub enum SpawnMode {
         x: u32,
         y: u32,
     },
+    PointFacingClockwise {
+        x: u32,
+        y: u32,
+        distance: u32,
+    },
     CircleFacingInward {
         max_distance: u32,
     },
@@ -82,6 +87,7 @@ impl Display for SpawnMode {
             SpawnMode::EvenlyDistributed => f.write_str("Evenly distributed"),
             SpawnMode::CenterFacingOutward => f.write_str("Center facing outward"),
             SpawnMode::PointFacingOutward { .. } => f.write_str("Point facing outward"),
+            SpawnMode::PointFacingClockwise { .. } => f.write_str("Point facing clockwise"),
             SpawnMode::CircleFacingInward { .. } => f.write_str("Circle facing inward"),
             SpawnMode::CircumferenceFacingInward { .. } => {
                 f.write_str("Circumference facing inwards")
@@ -106,6 +112,7 @@ impl SpawnMode {
             SpawnMode::EvenlyDistributed => None,
             SpawnMode::CenterFacingOutward => None,
             SpawnMode::PointFacingOutward { .. } => None,
+            SpawnMode::PointFacingClockwise { distance, .. } => Some(*distance),
             SpawnMode::CircleFacingInward { max_distance } => Some(*max_distance),
             SpawnMode::CircumferenceFacingInward { distance } => Some(*distance),
             SpawnMode::CircumferenceFacingOutward { distance } => Some(*distance),
@@ -255,7 +262,7 @@ pub struct MouseConstants {
     pub _padding: f32,
 }
 
-pub const NUM_AGENT_TYPES: usize = 4;
+pub const NUM_AGENT_TYPES: usize = 10;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Default, Pod, Zeroable)]
@@ -287,7 +294,7 @@ pub struct TrailInteraction {
     pub conversion: u32,
 }
 
-pub const NUM_TRAIL_STATS: usize = 4;
+pub const NUM_TRAIL_STATS: usize = 6;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]
