@@ -288,7 +288,6 @@ pub struct TrailInteraction {
 }
 
 pub const NUM_TRAIL_STATS: usize = 4;
-pub const INTS_PER_PIXEL: u32 = NUM_TRAIL_STATS.div_ceil(2) as u32;
 
 #[cfg_attr(not(target_arch = "spirv"), derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialEq, Pod, Zeroable)]

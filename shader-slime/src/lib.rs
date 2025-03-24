@@ -182,13 +182,15 @@ fn process_pixel(trail_buffer: &mut [u32], map_size: UVec2, agent_stats: &AgentS
 /// As a workaround, it is the callers responsibility to make sure position is within bounds
 pub fn get_pixel<'pixel>(trail_buffer: &'pixel mut [u32], map_size: UVec2, position: UVec2) -> PixelView<'pixel> {
     // if is_inside_bounds(position, constants) {
-    let pixel_index = (position.y as usize * map_size.x as usize + position.x as usize) * 2;
+    let pixel_index = (position.y as usize * map_size.x as usize + position.x as usize) * 4;
     // Some(
     // Safety: Safe since we're mutably borrowing different indices, which means there's not aliasing of mutable references
     unsafe {
         let a = &mut trail_buffer[pixel_index] as *mut _;
         let b = &mut trail_buffer[pixel_index + 1] as *mut _;
-        PixelView::new(&mut *a, &mut *b)
+        let c = &mut trail_buffer[pixel_index + 2] as *mut _;
+        let d = &mut trail_buffer[pixel_index + 3] as *mut _;
+        PixelView::new(&mut *a, &mut *b, &mut *c, &mut *d)
     }
     // } else {
     //     None

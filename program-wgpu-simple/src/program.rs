@@ -10,7 +10,7 @@ use crate::configuration::{GLOBALS, TRAIL_STATS};
 use wgpu::SurfaceTexture;
 use winit::event::{WindowEvent};
 use wgpu::util::DeviceExt;
-use shared::{ShaderConstants, INTS_PER_PIXEL};
+use shared::{ShaderConstants, pixel_view::INTS_PER_PIXEL};
 use crate::slot_agents::SlotAgents;
 use crate::slot_diffuse::SlotDiffuse;
 use crate::slot_mouse::SlotMouse;
