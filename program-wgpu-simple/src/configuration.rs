@@ -40,7 +40,7 @@ pub const GLOBALS: Globals = Globals {
     time_step: 1.0 / 60.0,
     max_frame_rate: 100.0,
     smoothen_after_max_frame_rate: false,
-    compute_steps_per_render: 2,
+    compute_steps_per_render: 1,
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 7.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),
@@ -60,7 +60,7 @@ pub const GLOBALS: Globals = Globals {
 #[derive(Clone, PartialEq, Default)]
 pub struct AgentStatsAll {
     pub name: String,
-    pub spawn_mode: SpawnMode,
+    pub spawn_mode: Vec<SpawnMode>,
     pub num_agents: usize,
     pub shader_stats: AgentStats,
 }
@@ -70,7 +70,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         AgentStatsAll {
             name: "Blue".to_string(),
             // spawn_mode: SpawnMode::CircumferenceFacingClockwise { distance: 170 },
-            spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 100 },
+            spawn_mode: vec![SpawnMode::CircumferenceFacingOutward { distance: 100 }],
             // spawn_mode: SpawnMode::BoxFacingRandom {
             //     spawn_box: SpawnBox {
             //         left: 400,
@@ -79,9 +79,9 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             //         box_height: 150,
             //     }
             // },
-            num_agents: 20000,
+            num_agents: 50000,
             shader_stats: AgentStats {
-                velocity: 65.0,
+                velocity: 40.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
@@ -120,10 +120,10 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "Green".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingOutward { distance: 100 },
-            num_agents: 20000,
+            spawn_mode: vec![SpawnMode::CircumferenceFacingOutward { distance: 100 }],
+            num_agents: 50000,
             shader_stats: AgentStats {
-                velocity: 65.0,
+                velocity: 40.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
@@ -131,10 +131,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 sensor_offset: 25.0,
                 interaction_channels: [
                     TrailInteraction {
-                        attraction: 0.2,
-                        conversion_enabled: 1,
-                        conversion_threshold: 0.8,
-                        conversion: 3,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -153,6 +149,10 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
+                        attraction: 0.2,
+                        conversion_enabled: 1,
+                        conversion_threshold: 0.8,
+                        conversion: 3,
                         ..Default::default()
                     },
                 ],
@@ -161,9 +161,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             ..Default::default()
         },
         AgentStatsAll {
-            name: "RedToBlue".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
-            num_agents: 0000,
+            name: "BlueInfection".to_string(),
             shader_stats: AgentStats {
                 velocity: 60.0,
                 turn_speed: 80.0,
@@ -171,7 +169,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 avoidance_threshold: 20.0,
                 sensor_angle_spacing: 60.0,
                 sensor_offset: 12.0,
-                timeout: 7.0,
+                timeout: 1.5,
                 timeout_conversion: 4,
                 interaction_channels: [
                     TrailInteraction {
@@ -179,7 +177,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
-                        attraction: 1.0,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -201,11 +198,10 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                     },
                 ],
             },
+            ..Default::default()
         },
         AgentStatsAll {
-            name: "RedToGreen".to_string(),
-            spawn_mode: SpawnMode::CircumferenceFacingInward { distance: 170 },
-            num_agents: 0000,
+            name: "GreenInfection".to_string(),
             shader_stats: AgentStats {
                 velocity: 60.0,
                 turn_speed: 80.0,
@@ -217,8 +213,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                 timeout_conversion: 5,
                 interaction_channels: [
                     TrailInteraction {
-                        attraction: 0.2,
-                        addition: 1.0 / 5.0,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -226,7 +220,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
-                        attraction: 1.0,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -240,10 +233,13 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
+                        attraction: 0.2,
+                        addition: 1.0 / 5.0,
                         ..Default::default()
                     },
                 ],
             },
+            ..Default::default()
         },
         AgentStatsAll {
             name: "GrayToBlue".to_string(),
@@ -259,13 +255,9 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
-                        conversion_enabled: 1,
-                        conversion_threshold: 0.8,
-                        conversion: 0,
                         ..Default::default()
                     },
                     TrailInteraction {
-                        attraction: -1.0,
                         conversion_enabled: 1,
                         conversion_threshold: 0.8,
                         conversion: 0,
@@ -310,10 +302,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
-                        attraction: -1.0,
-                        conversion_enabled: 1,
-                        conversion_threshold: 0.8,
-                        conversion: 1,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -336,11 +324,27 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             ..Default::default()
         },
         AgentStatsAll {
-            name: "Purple".to_string(),
-            spawn_mode: SpawnMode::PointFacingClockwise { x: DEFAULT_MAP_WIDTH - 100, y: DEFAULT_MAP_HEIGHT - 100, distance: 30 },
-            num_agents: 2000,
+            name: "White".to_string(),
+            spawn_mode: vec![
+                SpawnMode::PointFacingClockwise {
+                    x: DEFAULT_MAP_WIDTH / 2,
+                    y: 100,
+                    distance: 30,
+                },
+                SpawnMode::PointFacingClockwise {
+                    x: DEFAULT_MAP_WIDTH / 2,
+                    y: DEFAULT_MAP_HEIGHT / 2,
+                    distance: 30,
+                },
+                SpawnMode::PointFacingClockwise {
+                    x: DEFAULT_MAP_WIDTH / 2,
+                    y: DEFAULT_MAP_HEIGHT - 100,
+                    distance: 30,
+                },
+            ],
+            num_agents: 3000,
             shader_stats: AgentStats {
-                velocity: 25.0,
+                velocity: 2.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
@@ -354,7 +358,6 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
-                        attraction: 1.0,
                         ..Default::default()
                     },
                     TrailInteraction {
@@ -373,7 +376,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             },
         },
         AgentStatsAll {
-            name: "PurpleTemporaryBlue".to_string(),
+            name: "WhiteTemporaryBlue".to_string(),
             shader_stats: AgentStats {
                 velocity: 90.0,
                 turn_speed: 80.0,
@@ -410,7 +413,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
             ..Default::default()
         },
         AgentStatsAll {
-            name: "PurpleTemporaryGreen".to_string(),
+            name: "WhiteTemporaryGreen".to_string(),
             shader_stats: AgentStats {
                 velocity: 90.0,
                 turn_speed: 80.0,
@@ -448,10 +451,14 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
         },
         AgentStatsAll {
             name: "PermanentRed".to_string(),
-            spawn_mode: SpawnMode::PointFacingClockwise { x: 100, y: 100, distance: 30 },
-            num_agents: 2000,
+            spawn_mode: vec![SpawnMode::PointFacingClockwise {
+                x: 100,
+                y: DEFAULT_MAP_HEIGHT / 2,
+                distance: 30,
+            }],
+            num_agents: 8000,
             shader_stats: AgentStats {
-                velocity: 25.0,
+                velocity: 2.0,
                 turn_speed: 80.0,
                 turn_speed_avoidance: 30.0,
                 avoidance_threshold: 20.0,
@@ -476,6 +483,8 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
                         ..Default::default()
                     },
                     TrailInteraction {
+                        attraction: 1.0,
+                        addition: 0.2,
                         ..Default::default()
                     },
                 ],
@@ -486,7 +495,7 @@ pub fn create_agent_stats_all() -> [AgentStatsAll; NUM_AGENT_TYPES] {
 }
 
 pub const TRAIL_NAMES: [&'static str; NUM_TRAIL_STATS] =
-    ["Red", "Green", "Blue", "Gray", "Purple", "White"];
+    ["BlueInfection", "Green", "Blue", "Dead", "Cure", "GreenInfection"];
 
 pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
     TrailStats {
@@ -494,7 +503,7 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(1.0, 0.0, 0.0, 1.0),
+        color: Color::new(200.0/255.0, 0.0, 106.0/255.0, 1.0),
     },
     TrailStats {
         evaporation_speed: 50.0,
@@ -522,13 +531,13 @@ pub const TRAIL_STATS: [TrailStats; NUM_TRAIL_STATS] = [
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(1.00, 0.05, 1.00, 1.0),
+        color: Color::new(1.0, 248.0 / 255.0, 0.00, 1.0),
     },
     TrailStats {
         evaporation_speed: 50.0,
         diffusion_speed: 480.0,
         padding_1: 0.0,
         color_mode: ColorMode::Add.encode(),
-        color: Color::new(0.8, 0.8, 0.8, 1.0),
+        color: Color::new(1.00, 120.0/255.0, 72.0/255.0, 1.0),
     },
 ];

@@ -202,12 +202,14 @@ impl SlotAgents {
             .enumerate()
             .flat_map(|(channel_index, agent_stats): (usize, &AgentStatsAll)| {
                 *num_agents += agent_stats.num_agents;
+                agent_stats.spawn_mode.iter().flat_map(|spawn_mode: &SpawnMode|{
                 std::iter::repeat(())
                     .take(agent_stats.num_agents)
                     .flat_map(move |()| {
-                        let agent = spawn_agent(size, &agent_stats.spawn_mode, channel_index as u32, agent_stats);
+                        let agent = spawn_agent(size, &spawn_mode, channel_index as u32, agent_stats);
                         bytemuck::bytes_of(&agent).to_vec()
                     })
+                }).collect::<Vec<_>>()
             }).collect::<Vec<_>>();
         agent_bytes
     }

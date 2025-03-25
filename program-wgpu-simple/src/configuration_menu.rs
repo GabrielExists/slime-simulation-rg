@@ -49,7 +49,6 @@ pub fn render_configuration_menu(
                     }
                 });
                 for agent_stats in configuration.agent_stats.iter_mut() {
-                    let spawn = &mut agent_stats.spawn_mode;
                     ui.collapsing(format!("Agent {}", agent_stats.name), |ui| {
                         ui.add(Slider::new(&mut agent_stats.shader_stats.velocity, 5.0..=100.0)
                             .text("Velocity"));
@@ -63,6 +62,11 @@ pub fn render_configuration_menu(
                             .text("Sensor angle spacing (degrees)"));
                         ui.add(Slider::new(&mut agent_stats.shader_stats.sensor_offset, 3.0..=30.0)
                             .text("Sensor offset"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.timeout, 0.5..=30.0)
+                            .text("Timeout"));
+                        ui.add(Slider::new(&mut agent_stats.shader_stats.timeout_conversion, 0..=NUM_AGENT_TYPES as u32 - 1)
+                            .text("Timeout conversion target"));
+
                         ui.collapsing("Trail interactions", |ui| {
                             for channel_index in 0..NUM_TRAIL_STATS {
                                 ui.separator();
@@ -78,7 +82,7 @@ pub fn render_configuration_menu(
                                 if interaction.conversion_enabled != 0 {
                                     ui.add(Slider::new(&mut interaction.conversion_threshold, 0.0..=1.0)
                                         .text("Conversion threshold"));
-                                    ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32)
+                                    ui.add(Slider::new(&mut interaction.conversion, 0..=NUM_AGENT_TYPES as u32 - 1)
                                         .text("Conversion new agent type"));
                                 }
                             }
@@ -88,82 +92,84 @@ pub fn render_configuration_menu(
                         // ui.add(ComboBox::new(&mut agent_stats.spawn_mode, "Spawn mode"));
                         ui.add(Slider::new(&mut agent_stats.num_agents, 0..=1000000)
                             .text("Num agents").logarithmic(true));
-                        ComboBox::from_label("Spawn mode")
-                            .selected_text(format!("{}", spawn))
-                            .show_ui(ui, |ui| {
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::EvenlyDistributed), SpawnMode::EvenlyDistributed {});
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CenterFacingOutward {}), SpawnMode::CenterFacingOutward {});
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::PointFacingOutward {..}), SpawnMode::PointFacingOutward { x: 100, y: 100 });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircleFacingInward {..}), SpawnMode::CircleFacingInward {
-                                    max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                        for spawn in agent_stats.spawn_mode.iter_mut() {
+                            ComboBox::from_label("Spawn mode")
+                                .selected_text(format!("{}", spawn))
+                                .show_ui(ui, |ui| {
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::EvenlyDistributed), SpawnMode::EvenlyDistributed {});
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CenterFacingOutward {}), SpawnMode::CenterFacingOutward {});
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::PointFacingOutward {..}), SpawnMode::PointFacingOutward { x: 100, y: 100 });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircleFacingInward {..}), SpawnMode::CircleFacingInward {
+                                        max_distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                    });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingInward {..}), SpawnMode::CircumferenceFacingInward {
+                                        distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                    });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingOutward {..}), SpawnMode::CircumferenceFacingOutward {
+                                        distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                    });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingRandom {..}), SpawnMode::CircumferenceFacingRandom {
+                                        distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                    });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingClockwise {..}), SpawnMode::CircumferenceFacingClockwise {
+                                        distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
+                                    });
+                                    selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::BoxFacingRandom {..}), SpawnMode::BoxFacingRandom {
+                                        spawn_box: spawn.spawn_box().unwrap_or(SpawnBox::default())
+                                    });
                                 });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingInward {..}), SpawnMode::CircumferenceFacingInward {
-                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
-                                });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingOutward {..}), SpawnMode::CircumferenceFacingOutward {
-                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
-                                });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingRandom {..}), SpawnMode::CircumferenceFacingRandom {
-                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
-                                });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::CircumferenceFacingClockwise {..}), SpawnMode::CircumferenceFacingClockwise {
-                                    distance: spawn.distance().unwrap_or(DEFAULT_DISTANCE)
-                                });
-                                selectable_value_pred(ui, spawn, |mode| matches!(mode, SpawnMode::BoxFacingRandom {..}), SpawnMode::BoxFacingRandom {
-                                    spawn_box: spawn.spawn_box().unwrap_or(SpawnBox::default())
-                                });
-                            });
-                        let width = screen_size.width;
-                        let height = screen_size.height;
-                        let diagonal_max_radius = (
-                            (width as f32 / 2.0).powi(2) + (height as f32 / 2.0).powi(2)
-                        ).sqrt() as u32;
-                        match spawn {
-                            SpawnMode::EvenlyDistributed => {}
-                            SpawnMode::CenterFacingOutward => {}
-                            SpawnMode::PointFacingOutward { x, y } => {
-                                ui.add(Slider::new(x, 0..=width)
-                                    .text("X"));
-                                ui.add(Slider::new(y, 0..=height)
-                                    .text("Y"));
-                            }
-                            SpawnMode::PointFacingClockwise { x, y, distance } => {
-                                ui.add(Slider::new(x, 0..=width)
-                                    .text("X"));
-                                ui.add(Slider::new(y, 0..=height)
-                                    .text("Y"));
-                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
-                                    .text("Distance"));
-                            }
-                            SpawnMode::CircleFacingInward { max_distance } => {
-                                ui.add(Slider::new(max_distance, 0..=diagonal_max_radius)
-                                    .text("Max distance"));
-                            }
-                            SpawnMode::CircumferenceFacingInward { distance } => {
-                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
-                                    .text("Distance"));
-                            }
-                            SpawnMode::CircumferenceFacingOutward { distance } => {
-                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
-                                    .text("Distance"));
-                            }
-                            SpawnMode::CircumferenceFacingRandom { distance } => {
-                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
-                                    .text("Distance"));
-                            }
-                            SpawnMode::CircumferenceFacingClockwise { distance } => {
-                                ui.add(Slider::new(distance, 0..=diagonal_max_radius)
-                                    .text("Distance"));
-                            }
-                            SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
-                                ui.add(Slider::new(left, 0..=width)
-                                    .text("Left"));
-                                ui.add(Slider::new(top, 0..=height)
-                                    .text("Top"));
-                                ui.add(Slider::new(box_width, 0..=width - *left)
-                                    .text("Width"));
-                                ui.add(Slider::new(box_height, 0..=height - *top)
-                                    .text("Height"));
+                            let width = screen_size.width;
+                            let height = screen_size.height;
+                            let diagonal_max_radius = (
+                                (width as f32 / 2.0).powi(2) + (height as f32 / 2.0).powi(2)
+                            ).sqrt() as u32;
+                            match spawn {
+                                SpawnMode::EvenlyDistributed => {}
+                                SpawnMode::CenterFacingOutward => {}
+                                SpawnMode::PointFacingOutward { x, y } => {
+                                    ui.add(Slider::new(x, 0..=width)
+                                        .text("X"));
+                                    ui.add(Slider::new(y, 0..=height)
+                                        .text("Y"));
+                                }
+                                SpawnMode::PointFacingClockwise { x, y, distance } => {
+                                    ui.add(Slider::new(x, 0..=width)
+                                        .text("X"));
+                                    ui.add(Slider::new(y, 0..=height)
+                                        .text("Y"));
+                                    ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                        .text("Distance"));
+                                }
+                                SpawnMode::CircleFacingInward { max_distance } => {
+                                    ui.add(Slider::new(max_distance, 0..=diagonal_max_radius)
+                                        .text("Max distance"));
+                                }
+                                SpawnMode::CircumferenceFacingInward { distance } => {
+                                    ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                        .text("Distance"));
+                                }
+                                SpawnMode::CircumferenceFacingOutward { distance } => {
+                                    ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                        .text("Distance"));
+                                }
+                                SpawnMode::CircumferenceFacingRandom { distance } => {
+                                    ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                        .text("Distance"));
+                                }
+                                SpawnMode::CircumferenceFacingClockwise { distance } => {
+                                    ui.add(Slider::new(distance, 0..=diagonal_max_radius)
+                                        .text("Distance"));
+                                }
+                                SpawnMode::BoxFacingRandom { spawn_box: SpawnBox { left, top, box_width, box_height } } => {
+                                    ui.add(Slider::new(left, 0..=width)
+                                        .text("Left"));
+                                    ui.add(Slider::new(top, 0..=height)
+                                        .text("Top"));
+                                    ui.add(Slider::new(box_width, 0..=width - *left)
+                                        .text("Width"));
+                                    ui.add(Slider::new(box_height, 0..=height - *top)
+                                        .text("Height"));
+                                }
                             }
                         }
                     });
