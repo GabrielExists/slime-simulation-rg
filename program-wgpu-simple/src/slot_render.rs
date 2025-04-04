@@ -67,7 +67,7 @@ impl Slot for SlotRender {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &program_init.module,
-                entry_point: VS_ENTRY_POINT,
+                entry_point: Some(VS_ENTRY_POINT),
                 buffers: &[],
                 compilation_options: Default::default(),
             },
@@ -89,7 +89,7 @@ impl Slot for SlotRender {
             fragment: Some(wgpu::FragmentState {
                 compilation_options: Default::default(),
                 module: &program_init.module,
-                entry_point: FS_ENTRY_POINT,
+                entry_point: Some(FS_ENTRY_POINT),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: *program_init.surface_format,
                     blend: None,

@@ -1,5 +1,8 @@
+#[cfg(feature = "save-preset")]
 use std::future::Future;
+#[cfg(feature = "save-preset")]
 use std::pin::Pin;
+#[cfg(feature = "save-preset")]
 use std::task::{Poll, Waker};
 use crate::configuration::ConfigurationValues;
 use egui::Context;

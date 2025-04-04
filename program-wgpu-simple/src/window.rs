@@ -1,3 +1,4 @@
+use wgpu::BackendOptions;
 use crate::{
     configuration::RESIZE_MAP_WITH_WINDOW,
     program::Handles,
@@ -61,12 +62,28 @@ async fn run_inner(
     window: Window,
 ) {
     // Common in compute and graphics
-    let backends = wgpu::util::backend_bits_from_env()
-        .unwrap_or(wgpu::Backends::BROWSER_WEBGPU);
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends,
-        dx12_shader_compiler: wgpu::util::dx12_shader_compiler_from_env().unwrap_or_default(),
-        ..Default::default()
+    let backends = wgpu::Backends::from_env()
+        .unwrap_or(wgpu::Backends::GL);
+    // let backends = wgpu::util::backend_bits_from_env()
+    //     .unwrap_or(wgpu::Backends::GL);
+        //.unwrap_or(wgpu::Backends::BROWSER_WEBGPU);
+    // let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    //     backends,
+    //     dx12_shader_compiler: wgpu::util::dx12_shader_compiler_from_env().unwrap_or_default(),
+    //     ..Default::default()
+    // });
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::all(),
+        flags: wgpu::InstanceFlags::default(),
+        backend_options: BackendOptions {
+            dx12: wgpu::Dx12BackendOptions {
+                shader_compiler: wgpu::Dx12Compiler::default(),
+            },
+            gl: wgpu::GlBackendOptions {
+                gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+                ..Default::default()
+            }
+        }
     });
 
     // Graphics

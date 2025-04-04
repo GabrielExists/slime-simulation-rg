@@ -77,7 +77,7 @@ impl Slot for SlotDiffuse {
             label: None,
             layout: Some(&pipeline_layout),
             module: &program_init.module,
-            entry_point: ENTRY_POINT,
+            entry_point: Some(ENTRY_POINT),
         });
 
         let init = SlotDiffuseInit {

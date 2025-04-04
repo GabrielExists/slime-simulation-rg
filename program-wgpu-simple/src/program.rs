@@ -1,4 +1,3 @@
-use std::cmp::min;
 use std::ops::Deref;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -171,7 +170,7 @@ impl Program<'_> {
             return false;
         }
         let time = start.elapsed().as_secs_f32();
-        let mut delta_time = last_time.elapsed().as_secs_f32();
+        let delta_time = last_time.elapsed().as_secs_f32();
         let mut time_step = self.configuration.globals.time_step * rand::rng().random_range(0.95..1.05);
         let min_delta_time = 1.0 / self.configuration.globals.max_frame_rate;
         if delta_time < min_delta_time {

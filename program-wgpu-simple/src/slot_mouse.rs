@@ -65,7 +65,7 @@ impl Slot for SlotMouse {
             label: None,
             layout: Some(&pipeline_layout),
             module: &program_init.module,
-            entry_point: ENTRY_POINT,
+            entry_point: Some(ENTRY_POINT),
         });
 
         let init = SlotMouseInit {

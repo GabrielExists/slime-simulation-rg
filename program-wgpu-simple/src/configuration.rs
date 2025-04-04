@@ -36,20 +36,12 @@ pub struct Globals {
     pub map_height: u32,
 }
 
-// #[cfg(not(target_arch = "aarch64"))]
-const FIXED_DELTA_TIME: f32 = 1.0 / 120.0;
-// #[cfg(not(target_arch = "aarch64"))]
-const TIME_SCALE: f32 = 2.0;
-// #[cfg(target_arch = "aarch64")]
-// const FIXED_DELTA_TIME: f32 = 1.0 / 8.0;
-// #[cfg(target_arch = "aarch64")]
-// const TIME_SCALE: f32 = 0.15;
-
 pub const GLOBALS: Globals = Globals {
     time_step: 1.0/60.0,
-    max_frame_rate: 30.0,
+    max_frame_rate: 60.0,
     smoothen_after_max_frame_rate: true,
-    compute_steps_per_render: 12,
+    compute_steps_per_render: 1,
+
     click_mode: ClickMode::PaintTrail(0),
     brush_size: 8.0,
     background_color: Color::new(0.0048377407, 0.014973952, 0.040314503, 1.0),

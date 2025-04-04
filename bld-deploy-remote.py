@@ -169,6 +169,8 @@ def bld_deploy_run(args):
         print(f"Making target application executable: {chmod_cmd}")
         os.system(chmod_cmd)
     if args.run:
+        #run_cmd = f"{sshpass_cmd} ssh {ssh_target_ident} WAYLAND_DISPLAY=wayland-0 {dest_path}"
+        #run_cmd = f"{sshpass_cmd} ssh {ssh_target_ident} WAYLAND_DISPLAY=wayland-0 {dest_path}"
         run_cmd = f"{sshpass_cmd} ssh {ssh_target_ident} DISPLAY=:0 WGPU_BACKEND=gl {dest_path}"
         print(f"Running target application: {run_cmd}")
         os.system(run_cmd)
